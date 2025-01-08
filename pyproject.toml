@@ -19,6 +19,7 @@ bcrypt = "4.0.1"
 python-jose = "^3.3.0"
 pyjwt = "^2.10.1"
 python-multipart = "^0.0.20"
+fastapi-permissions = "^0.2.7"
 
 
 [build-system]

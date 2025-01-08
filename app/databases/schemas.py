@@ -23,6 +23,7 @@ def validate(values):
 
 class UserBase(BaseModel):
     username: str
+    role_id: int
 
     class Config:
         from_attributes = True
@@ -41,6 +42,7 @@ class UserCreate(UserBase):
 
 class ShowUser(UserBase):
     email: EmailStr | None = None
+    role_id: int
 
 
 class UserUpdate(BaseModel):
@@ -64,6 +66,10 @@ class UserInDB(BaseModel):
 class RoleBase(BaseModel):
     name: str
     description: str
+
+
+class RoleName(RoleBase):
+    role_id: int
 
 
 # ============================================================================

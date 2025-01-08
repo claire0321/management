@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from . import hashing
 from .token import verify_token
 from ..databases import get_db, schemas
-from ..models import user_model
+from ..models import user_model, role_model
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -56,5 +56,14 @@ async def get_manager_user(manager_user: schemas.UserInDB = Depends(get_current_
         raise HTTPException(status_code=400, detail="Permission denied")
     return manager_user
 
+def check_role(required_role: int):
+    def role_checker(user: schemas.UserInDB = Depends(get_current_active_user)):
+        if user.role_id > required_role:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Insufficient permissions for {role_model.Role.get_role_name(user.role_id)} user",
+            )
+        return user
 
+    return role_checker
 
