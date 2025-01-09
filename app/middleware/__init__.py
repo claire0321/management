@@ -1,3 +1,84 @@
+import logging
+import time
+
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+
+logger = logging.getLogger("uvicorn.access")
+logger.disabled = True
+
+
+def register_middleware(app: FastAPI):
+
+    @app.middleware("http")
+    async def custom_logging(request: Request, call_next):
+        start_time = time.time()
+
+        response = await call_next(request)
+        processing_time = time.time() - start_time
+        message = f"{request.method} - {request.url.path} - {response.status_code} completed after {processing_time}s"
+
+        print(message)
+        return response
+
+    @app.middleware("http")
+    async def authorization(request: Request, call_next):
+        if not "Authorization" in request.headers:
+            return JSONResponse(
+                content={
+                    "message": "Not Authenticated",
+                    "resolution": "Please provide the right credentials to proceed",
+                },
+                status_code=401,
+            )
+        response = await call_next(request)
+
+        return response
+
+
+# import base64
+# import binascii
+#
+# from fastapi import Depends, HTTPException, status
+# from sqlalchemy.orm import Session
+# from starlette.authentication import (
+#     AuthCredentials,
+#     AuthenticationBackend,
+#     AuthenticationError,
+#     SimpleUser,
+# )
+#
+# from ..authorization import oauth2
+# from ..databases import get_db
+#
+#
+# class BasicAuthBackend(AuthenticationBackend):
+#     async def authenticate(self, request, db: Session = Depends(get_db)):
+#         if "Authorization" not in request.headers:
+#             return
+#
+#         auth = request.headers["Authorization"]
+#
+#         try:
+#             scheme, credentials = auth.split()
+#             if scheme.lower() != "basic":
+#                 return
+#             decode = base64.b64decode(credentials).decode("ascii")
+#         except (ValueError, UnicodeDecodeError, binascii.Error) as exc:
+#             raise AuthenticationError("Invalid basic auth credentials")
+#
+#         username, _, password = decode.partition(":")
+#         user = oauth2.authenticate_user(username, password, db)
+#         if not user:
+#             raise HTTPException(
+#                 status_code=status.HTTP_401_UNAUTHORIZED,
+#                 detail="Incorrect username or password",
+#                 headers={"WWW-Authenticate": "Bearer"},
+#             )
+#
+#         return AuthCredentials(["authenticated"]), SimpleUser(username)
+
+
 # from fastapi import Request
 # from starlette.middleware.base import BaseHTTPMiddleware
 # from starlette.responses import JSONResponse

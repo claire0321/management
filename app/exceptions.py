@@ -1,3 +1,116 @@
+from typing import Any, Callable
+
+from fastapi import FastAPI
+from fastapi.requests import Request
+from fastapi.responses import JSONResponse
+from starlette.status import HTTP_403_FORBIDDEN, HTTP_404_NOT_FOUND
+
+
+class UserException(Exception):
+    """This is the base class for all user errors"""
+
+    pass
+
+
+class InvalidToken(UserException):
+    """User has provided an invalid or expired token"""
+
+    pass
+
+
+class RevokedToken(UserException):
+    """User has provided a token that has been revoked"""
+
+    pass
+
+
+class AccessTokenRequired(UserException):
+    """User has provided a refresh token when an access token is needed"""
+
+    pass
+
+
+class RefreshTokenRequired(UserException):
+    """User has provided an access token when a refresh token is needed"""
+
+    pass
+
+
+class UserAlreadyExists(UserException):
+    """User has provided an email for a user who exists during sign up."""
+
+    pass
+
+
+class InvalidCredentials(UserException):
+    """User has provided wrong email or password during log in."""
+
+    pass
+
+
+class InsufficientPermission(UserException):
+    """User does not have the neccessary permissions to perform an action."""
+
+    pass
+
+
+class RoleNotFound(UserException):
+    """Role Not found"""
+
+    pass
+
+
+class RoleAlreadyExists(UserException):
+    """Role already exists"""
+
+    pass
+
+
+class UserNotFound(UserException):
+    """User Not found"""
+
+    pass
+
+
+class AccountNotVerified(Exception):
+    """Account not yet verified"""
+
+    pass
+
+
+def create_exception_handler(
+    status_code: int, initial_detail: Any
+) -> Callable[[Request, Exception], JSONResponse]:
+    async def exception_handler(request: Request, exc: UserException):
+        return JSONResponse(content=initial_detail, status_code=status_code)
+
+    return exception_handler
+
+
+def register_all_errors(app: FastAPI):
+    app.add_exception_handler(
+        UserAlreadyExists,
+        create_exception_handler(
+            status_code=HTTP_403_FORBIDDEN,
+            initial_detail={
+                "message": "User with email already exists",
+                "error_code": "user_exists",
+            },
+        ),
+    )
+
+    app.add_exception_handler(
+        UserNotFound,
+        create_exception_handler(
+            status_code=HTTP_404_NOT_FOUND,
+            initial_detail={
+                "message": "User not found",
+                "error_code": "user_not_found",
+            },
+        ),
+    )
+
+
 class StatusCode:
     HTTP_500 = 500
     HTTP_400 = 400

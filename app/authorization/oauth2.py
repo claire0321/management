@@ -23,7 +23,7 @@ def authenticate_user(username: str, password: str, db: Session = Depends(get_db
 
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
+        status_code=status.HTTP_403_FORBIDDEN,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
@@ -43,18 +43,9 @@ async def get_current_active_user(
     current_user: schemas.UserInDB = Depends(get_current_user),
 ):
     if not current_user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
+        raise HTTPException(status_code=403, detail="Inactive user")
     return current_user
 
-async def get_admin_user(admin_user: schemas.UserInDB = Depends(get_current_active_user)):
-    if admin_user.role_id != 1:
-        raise HTTPException(status_code=400, detail="Permission denied")
-    return admin_user
-
-async def get_manager_user(manager_user: schemas.UserInDB = Depends(get_current_active_user)):
-    if manager_user.role_id != 2:
-        raise HTTPException(status_code=400, detail="Permission denied")
-    return manager_user
 
 def check_role(required_role: int):
     def role_checker(user: schemas.UserInDB = Depends(get_current_active_user)):

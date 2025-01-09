@@ -21,6 +21,6 @@ async def login_for_access_token(
         )
     # access_token_expires = timedelta(minutes=Token.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = token.create_access_token(
-        data={"sub": user.username, "role_id": user.role_id}
+        data={"sub": user.username, "role_id": user.role_id, "Authentication": True}
     )
     return {"access_token": access_token, "token_type": "bearer"}
