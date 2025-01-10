@@ -4,7 +4,7 @@ from fastapi import APIRouter, status, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from . import is_user_exist
-from ..authorization import hashing, oauth2
+from ..authorization import hashing
 from ..databases import schemas, get_db
 from ..models import user_model
 
@@ -22,7 +22,7 @@ router = APIRouter(prefix="/users", tags=["Users"])
 async def create_user(
     user: schemas.UserCreate = Depends(),
     db: Session = Depends(get_db),
-    current_user: schemas.UserInDB = Depends(oauth2.check_role(2)),
+    # current_user: schemas.UserInDB = Depends(oauth2.check_role(2)),
 ):
     user_data = user.model_dump(exclude_unset=True)
     new_user = user_model.User(**user_data)
@@ -52,7 +52,7 @@ async def create_user(
 )
 async def get_users(
     db: Session = Depends(get_db),
-    current_user: schemas.UserInDB = Depends(oauth2.check_role(3)),
+    # current_user: schemas.UserInDB = Depends(oauth2.check_role(3)),
 ):
     return db.query(user_model.User).filter(user_model.User.is_active == True).all()
 
@@ -67,7 +67,7 @@ async def get_users(
 async def get_user(
     username: str,
     db: Session = Depends(get_db),
-    current_user: schemas.UserInDB = Depends(oauth2.check_role(3)),
+    # current_user: schemas.UserInDB = Depends(oauth2.check_role(3)),
 ):
     # username = "".join(username.split()).capitalize()
     user = is_user_exist(username, True, db)
@@ -89,7 +89,7 @@ async def update_user(
     username: str,
     updated_user: schemas.UserUpdate,
     db: Session = Depends(get_db),
-    current_user: schemas.UserInDB = Depends(oauth2.check_role(2)),
+    # current_user: schemas.UserInDB = Depends(oauth2.check_role(2)),
 ):
     # username = "".join(username.split()).capitalize()
     user = is_user_exist(username, True, db)
@@ -129,7 +129,7 @@ async def update_user(
 async def delete_user(
     username: str,
     db: Session = Depends(get_db),
-    current_user: schemas.UserInDB = Depends(oauth2.check_role(2)),
+    # current_user: schemas.UserInDB = Depends(oauth2.check_role(2)),
 ):
     user = is_user_exist(username, True, db)
     db.delete(user)
@@ -146,7 +146,7 @@ async def delete_user(
 async def activate_user(
     username: str,
     db: Session = Depends(get_db),
-    current_user: schemas.UserInDB = Depends(oauth2.check_role(2)),
+    # current_user: schemas.UserInDB = Depends(oauth2.check_role(2)),
 ):
     # username = username.capitalize()
     user = is_user_exist(username, False, db)
@@ -173,7 +173,7 @@ async def activate_user(
 async def deactivate_user(
     username: str,
     db: Session = Depends(get_db),
-    current_user: schemas.UserInDB = Depends(oauth2.get_current_active_user),
+    # current_user: schemas.UserInDB = Depends(oauth2.get_current_active_user),
 ):
     user = is_user_exist(username, True, db)
 

@@ -1,106 +1,288 @@
-import base64
+# https://m.blog.naver.com/indy9052/221934084260
 
-from fastapi import Request, FastAPI
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Depends, HTTPException, Security
+from fastapi.security.api_key import APIKeyHeader
+from .authorization.token import SECRET_KEY
 
 app = FastAPI()
 
-
-def check_permission(method, api, auth):
-    # The following paths are always allowed:
-    if method == "GET" and api[1:] in ["docs", "openapi.json", "favicon.ico"]:
-        return True
-    # Parse auth header and check scheme, username and password
-    scheme, data = (auth or " ").split(" ", 1)
-    if scheme != "Basic":
-        return False
-    username, password = base64.b64decode(data).decode().split(":", 1)
-    if username == "john" and password == "test123":
-        return True
+API_KEY = "your-secret-api-key"
+API_KEY_NAME = "access_token"
+api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 
-@app.middleware("http")
-async def check_authentication(request: Request, call_next):
-    auth = request.headers.get("Authorization")
-    if not check_permission(request.method, request.url.path, auth):
-        return JSONResponse(None, 401, {"WWW-Authenticate": "Basic"})
-    return await call_next(request)
+def get_api_key(api_key_header: str = Security(api_key_header)):
+    if api_key_header == SECRET_KEY:
+        return api_key_header
+    else:
+        raise HTTPException(status_code=403, detail="Could not validate credentials")
 
 
-@app.get("/test")
-async def root():
-    return {"message": "Hello World"}
+@app.get("/protected-route")
+async def protected_route(api_key: str = Depends(get_api_key)):
+    return {"message": "You have access to this route"}
 
 
-# from fastapi import FastAPI, Request, HTTPException, Depends
-# from jose import JWTError, jwt
-# from starlette.middleware.base import BaseHTTPMiddleware
-#
-# # Secret key for JWT encoding and decoding
-# SECRET_KEY = "your_secret_key"
-# ALGORITHM = "HS256"
-#
-# # Your user model (can be replaced with an actual DB call or ORM)
-# users_db = {
-#     "user1": {"username": "user1", "role": "admin"},
-#     "user2": {"username": "user2", "role": "editor"},
-# }
+@app.get("/unprotected-route")
+async def unprotected_route():
+    return {"message": "This route is open to everyone"}
+
+
+# from starlette.applications import Starlette
+# from starlette.authentication import (
+#     AuthCredentials,
+#     AuthenticationBackend,
+#     AuthenticationError,
+#     SimpleUser,
+# )
+# from starlette.middleware import Middleware
+# from starlette.middleware.authentication import AuthenticationMiddleware
+# from starlette.responses import PlainTextResponse
+# from starlette.routing import Route
+# import base64
+# import binascii
 #
 #
-# class AuthenticationMiddleware(BaseHTTPMiddleware):
-#     async def dispatch(self, request: Request, call_next):
-#         authorization: str = request.headers.get("Authorization")
-#         if authorization is None:
-#             raise HTTPException(status_code=401, detail="Authorization header missing")
+# class BasicAuthBackend(AuthenticationBackend):
+#     async def authenticate(self, conn):
+#         if "Authorization" not in conn.headers:
+#             return
 #
+#         auth = conn.headers["Authorization"]
 #         try:
-#             token = authorization.split(" ")[1]
-#             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-#             username: str = payload.get("sub")
-#             if username is None:
-#                 raise HTTPException(status_code=401, detail="Token has no sub")
+#             scheme, credentials = auth.split()
+#             if scheme.lower() != "basic":
+#                 return
+#             decoded = base64.b64decode(credentials).decode("ascii")
+#         except (ValueError, UnicodeDecodeError, binascii.Error) as exc:
+#             raise AuthenticationError("Invalid basic auth credentials")
 #
-#             request.state.username = username
-#         except JWTError:
-#             raise HTTPException(status_code=401, detail="Invalid token")
+#         username, _, password = decoded.partition(":")
+#         # TODO: You'd want to verify the username and password here.
+#         return AuthCredentials(["authenticated"]), SimpleUser(username)
 #
+#
+# async def homepage(request):
+#     if request.user.is_authenticated:
+#         return PlainTextResponse("Hello, " + request.user.display_name)
+#     return PlainTextResponse("Hello, you")
+#
+#
+# routes = [Route("/", endpoint=homepage)]
+#
+# middleware = [Middleware(AuthenticationMiddleware, backend=BasicAuthBackend())]
+#
+# app = Starlette(routes=routes, middleware=middleware)
+
+# -------------------------------------------------------------------
+# -------------------------------------------------------------------
+# -------------------------------------------------------------------
+
+
+# from typing import Callable
+#
+# import jwt  # You can use any JWT library
+# from fastapi import FastAPI, HTTPException
+# from starlette.middleware.base import BaseHTTPMiddleware
+# from starlette.requests import Request
+#
+# SECRET_KEY = "your_secret_key"  # Replace with your actual secret key
+#
+#
+# class BearerAuthMiddleware(BaseHTTPMiddleware):
+#     async def dispatch(self, request: Request, call_next: Callable):
+#         authorization: str = request.headers.get("Authorization")
+#
+#         # Check if the Authorization header is present and starts with "Bearer "
+#         if authorization and authorization.startswith("Bearer "):
+#             token = authorization.split("Bearer ")[1]
+#             try:
+#                 # Verify the token (you should use your preferred method of validation)
+#                 decoded_token = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+#                 # You can attach the decoded token to the request if needed
+#                 request.state.user = (
+#                     decoded_token  # Attach the user data to request state
+#                 )
+#             except jwt.PyJWTError:
+#                 raise HTTPException(status_code=401, detail="Invalid or expired token")
+#
+#         # Proceed with the request
 #         response = await call_next(request)
 #         return response
 #
 #
+# # Initialize FastAPI application
 # app = FastAPI()
 #
-# # app.add_middleware(AuthenticationMiddleware)
+# # Add the BearerAuthMiddleware to the app
+# app.add_middleware(BearerAuthMiddleware)
 #
 #
-# # Custom dependency to check the role
-# def get_current_user(request: Request):
-#     username = request.state.username
-#     if username not in users_db:
-#         raise HTTPException(status_code=404, detail="User not found")
-#     return users_db[username]
+# @app.get("/secure-endpoint")
+# async def secure_endpoint(request: Request):
+#     # If the middleware is successful, you can access user info from request.state
+#     if hasattr(request.state, "user"):
+#         return {"message": "Access granted", "user": request.state.user}
+#     else:
+#         raise HTTPException(status_code=401, detail="Unauthorized")
+
+
+# import logging
+#
+# from fastapi import FastAPI
+# from starlette.requests import Request
+# from starlette_context import context
+# from starlette_context.middleware import ContextMiddleware
+#
+# app = FastAPI(title="TestAPI", description="This is test API project", version="0.0.1")
 #
 #
-# def require_role(role: str):
-#     def role_dependency(user: dict = Depends(get_current_user)):
-#         if user["role"] != role:
-#             raise HTTPException(status_code=403, detail="Not authorized")
-#         return user
+# async def audit_log(request: Request, call_next):
+#     response = await call_next(request)
+#     if "user_id" in context:
+#         logging.info("user id : {}".format(context["user_id"]))
+#     if "user_name" in context:
+#         logging.info("user name : {}".format(context["user_name"]))
 #
-#     return role_dependency
-#
-#
-# # Example of a route that requires admin role
-# @app.get("/admin-data")
-# async def get_admin_data(user: dict = Depends(require_role("admin"))):
-#     return {"message": f"Welcome, {user['username']}! You have admin access."}
+#     return response
 #
 #
-# # Example of a route that requires editor role
-# @app.get("/editor-data")
-# async def get_editor_data(user: dict = Depends(require_role("editor"))):
-#     return {"message": f"Welcome, {user['username']}! You have editor access."}
+# app.middleware("http")(audit_log)
+# app.add_middleware(ContextMiddleware)
 #
+#
+# @app.get("/")
+# def get_root(id: str, name: str):
+#     context.update(user_id=id)
+#     context.update(user_name=name)
+#     return {"Hello": "World"}
+
+
+# -------------------------------------------------------------------
+# -------------------------------------------------------------------
+# -------------------------------------------------------------------
+
+# import base64
+#
+# from fastapi import FastAPI, Request
+# from fastapi.responses import JSONResponse
+#
+# app = FastAPI()
+#
+#
+# @app.middleware("http")
+# async def check_authentication(request: Request, call_next):
+#     auth = request.headers.get("Authorization")
+#     # The following paths are always allowed:
+#     if request.method == "GET" and request.url.path[1:] in [
+#         "docs",
+#         "openapi.json",
+#         "favicon.ico",
+#     ]:
+#         return await call_next(request)
+#     # Parse auth header and check scheme, username and password
+#     scheme, data = (auth or " ").split(" ", 1)
+#     if scheme != "Basic":
+#         return JSONResponse(None, 401, {"WWW-Authenticate": "Basic"})
+#     username, password = base64.b64decode(data).decode().split(":", 1)
+#     if username == "john" and password == "test123":
+#         return await call_next(request)
+#
+#
+# @app.get("/test")
+# async def root():
+#     return {"message": "Hello World"}
+
+
+# -------------------------------------------------------------------
+# -------------------------------------------------------------------
+# -------------------------------------------------------------------
+
+# import jwt
+# from fastapi import FastAPI, Request, HTTPException
+# from starlette.middleware.base import BaseHTTPMiddleware
+#
+# # 비밀키와 알고리즘
+# SECRET_KEY = "your_secret_key"
+# ALGORITHM = "HS256"
+#
+#
+# # Context Middleware
+# class ContextMiddleware(BaseHTTPMiddleware):
+#     async def dispatch(self, request: Request, call_next):
+#         # Context 정보 설정
+#         request.state.user = {
+#             "user_id": 1,
+#             "username": "test_user",
+#             "role": "admin",
+#         }  # 예시 사용자
+#         request.state.db = "fake_database_connection"  # 예시 DB 연결 객체
+#
+#         # 요청을 처리하고 응답을 받음
+#         response = await call_next(request)
+#         return response
+#
+#
+# # Authentication and Authorization Middleware
+# class AuthMiddleware(BaseHTTPMiddleware):
+#     async def dispatch(self, request: Request, call_next):
+#         # Authorization 헤더에서 토큰을 추출
+#         authorization: str = request.headers.get("Authorization")
+#
+#         if not authorization:
+#             return HTTPException(
+#                 status_code=401, detail="Authorization token is missing"
+#             )
+#
+#         token = authorization.split(" ")[1]  # "Bearer <token>" 형식에서 토큰 추출
+#
+#         try:
+#             # JWT 토큰 검증
+#             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+#             request.state.user = payload  # 사용자 정보를 request state에 저장
+#         except jwt.ExpiredSignatureError:
+#             raise HTTPException(status_code=401, detail="Token has expired")
+#         except jwt.InvalidTokenError:
+#             raise HTTPException(status_code=401, detail="Invalid token")
+#
+#         # 권한 검사
+#         if request.state.user.get("role") != "admin":
+#             raise HTTPException(
+#                 status_code=403, detail="Forbidden: You don't have permission"
+#             )
+#
+#         # 인증과 권한 확인 후 요청을 처리
+#         response = await call_next(request)
+#         return response
+#
+#
+# # FastAPI 애플리케이션 설정
+# app = FastAPI()
+#
+# # 미들웨어 추가
+# app.add_middleware(ContextMiddleware)
+# app.add_middleware(AuthMiddleware)
+#
+#
+# # 테스트용 엔드포인트
+# @app.get("/context")
+# async def get_context(request: Request):
+#     user = request.state.user
+#     db = request.state.db
+#     return {"user": user, "db": db}
+#
+#
+# @app.get("/protected")
+# async def protected_route(request: Request):
+#     user = request.state.user
+#     return {"message": f"Hello {user['username']}, you are authorized!"}
+#
+#
+# @app.get("/public")
+# async def public_route():
+#     return {"message": "This is a public route!"}
+
+
 #
 # from datetime import datetime, timedelta
 #

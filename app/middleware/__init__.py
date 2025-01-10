@@ -1,39 +1,90 @@
 import logging
-import time
+from typing import Optional, Sequence
 
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
+from starlette_context import request_cycle_context
+from starlette_context.errors import ConfigurationError, MiddleWareValidationError
+from starlette_context.plugins import Plugin
 
 logger = logging.getLogger("uvicorn.access")
 logger.disabled = True
 
+# https://stackoverflow.com/questions/64108406/fastapi-save-context-that-will-be-available-in-endpoints
 
-def register_middleware(app: FastAPI):
 
-    @app.middleware("http")
-    async def custom_logging(request: Request, call_next):
-        start_time = time.time()
+class CustomContextMiddleware(BaseHTTPMiddleware):
+    def __init__(
+        self,
+        plugins: Optional[Sequence[Plugin]] = None,
+        default_error_response: Response = Response(status_code=400),
+        *args,
+        **kwargs,
+    ) -> None:
+        super().__init__()
+        for plugin in plugins or ():
+            if not isinstance(plugin, Plugin):
+                raise ConfigurationError(f"Plugin {plugin} is not valid instance")
+        self.plugins = plugins or ()
+        self.error_response = default_error_response
 
-        response = await call_next(request)
-        processing_time = time.time() - start_time
-        message = f"{request.method} - {request.url.path} - {response.status_code} completed after {processing_time}s"
+    async def set_context(self, request: Request) -> dict:
+        """You might want to override this method.
 
-        print(message)
-        return response
+        The dict it returns will be saved in the scope of a context. You
+        can always do that later.
+        """
+        return {
+            plugin.key: await plugin.process_request(request) for plugin in self.plugins
+        }
 
-    @app.middleware("http")
-    async def authorization(request: Request, call_next):
-        if not "Authorization" in request.headers:
-            return JSONResponse(
-                content={
-                    "message": "Not Authenticated",
-                    "resolution": "Please provide the right credentials to proceed",
-                },
-                status_code=401,
-            )
-        response = await call_next(request)
+    async def dispatch(self, request: Request, call_next) -> Response:
+        try:
+            context = await self.set_context(request)
+        except MiddleWareValidationError as e:
+            error_response = e.error_response or self.error_response
+            return error_response
 
-        return response
+        with request_cycle_context(context):
+            # process rest of response stack
+            response = await call_next(request)
+
+            # gets back to middleware, process response with plugins
+            for plugin in self.plugins:
+                await plugin.enrich_response(response)
+            # return response before resetting context
+            # allowing further middlewares to still use the context
+            return response
+        # context reset
+
+
+# def register_middleware(app: FastAPI):
+#
+#     @app.middleware("http")
+#     async def custom_logging(request: Request, call_next):
+#         start_time = time.time()
+#
+#         response = await call_next(request)
+#         processing_time = time.time() - start_time
+#         message = f"{request.method} - {request.url.path} - {response.status_code} completed after {processing_time}s"
+#
+#         print(message)
+#         return response
+#
+#     @app.middleware("http")
+#     async def authorization(request: Request, call_next):
+#         if not "Authorization" in request.headers:
+#             return JSONResponse(
+#                 content={
+#                     "message": "Not Authenticated",
+#                     "resolution": "Please provide the right credentials to proceed",
+#                 },
+#                 status_code=401,
+#             )
+#         response = await call_next(request)
+#
+#         return response
 
 
 # import base64

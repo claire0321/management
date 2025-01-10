@@ -6,6 +6,7 @@ from . import models
 from .databases import engine
 from .middleware import auth_middleware
 from .routers import authentication, users, roles
+from starlette.middleware.authentication import AuthenticationMiddleware
 
 app = FastAPI()
 
@@ -14,13 +15,16 @@ app = FastAPI()
 
 models.Base.metadata.create_all(bind=engine)
 
-app.add_middleware(auth_middleware.AuthorizationMiddleware)
-app.add_middleware(auth_middleware.AuthenticationMiddleware)
-
-
 app.include_router(authentication.router)
 app.include_router(users.router)
 app.include_router(roles.router)
+
+# app.add_middleware()
+# app.add_middleware(ContextMiddleware)
+app.add_middleware(auth_middleware.AuthorizationMiddleware)
+app.add_middleware(
+    AuthenticationMiddleware, backend=auth_middleware.AuthenticationMiddleware()
+)
 
 
 # app.add_middleware(
