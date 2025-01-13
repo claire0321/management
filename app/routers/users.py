@@ -2,10 +2,15 @@ from typing import List, Union
 
 from fastapi import APIRouter, status, Depends, HTTPException
 from sqlalchemy.orm import Session
+from starlette.responses import JSONResponse
 
 from . import is_user_exist
-from ..authorization import hashing
+
+# from .authentication import login_for_access_token
+from ..authorization import hashing, oauth2, token
 from ..databases import schemas, get_db
+
+from ..middleware.auth_middleware import AuthorizationMiddleware
 from ..models import user_model
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -13,6 +18,7 @@ router = APIRouter(prefix="/users", tags=["Users"])
 
 @router.post(
     "/",
+    # dependencies=[Depends(AuthenticationMiddleware)],
     status_code=status.HTTP_201_CREATED,
     response_model=Union[schemas.ShowUser, schemas.UserBase],
     response_model_exclude={"password"},
@@ -22,7 +28,7 @@ router = APIRouter(prefix="/users", tags=["Users"])
 async def create_user(
     user: schemas.UserCreate = Depends(),
     db: Session = Depends(get_db),
-    # current_user: schemas.UserInDB = Depends(oauth2.check_role(2)),
+    # current_user: schemas.UserInDB = Depends(oauth2.get_current_user),
 ):
     user_data = user.model_dump(exclude_unset=True)
     new_user = user_model.User(**user_data)
@@ -35,7 +41,7 @@ async def create_user(
         if new_user.email:
             return user
 
-        return schemas.UserBase(username=new_user.username)
+        return JSONResponse(token.sign_jwt(new_user.username))
     except:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -46,6 +52,7 @@ async def create_user(
 @router.get(
     "/",
     response_model=List[schemas.UserBase],
+    # dependencies=[Depends(AuthorizationMiddleware)],
     status_code=status.HTTP_200_OK,
     summary="회원 목록 조회",
     description="전체 회원의 username 목록을 list 형태로 출력 합니다.",

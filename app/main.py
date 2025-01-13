@@ -19,13 +19,12 @@ app.include_router(authentication.router)
 app.include_router(users.router)
 app.include_router(roles.router)
 
-# app.add_middleware()
 # app.add_middleware(ContextMiddleware)
 app.add_middleware(auth_middleware.AuthorizationMiddleware)
-app.add_middleware(
-    AuthenticationMiddleware, backend=auth_middleware.AuthenticationMiddleware()
-)
-
+# app.add_middleware(
+#     AuthenticationMiddleware, backend=auth_middleware.AuthenticationMiddleware()
+# )
+app.add_middleware(auth_middleware.AuthenticationMiddleware)
 
 # app.add_middleware(
 #     CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]

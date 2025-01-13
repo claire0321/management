@@ -1,5 +1,5 @@
 from fastapi import HTTPException
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 from ..authorization import hashing
 
@@ -23,7 +23,7 @@ def validate(values):
 
 class UserBase(BaseModel):
     username: str
-    role_id: int
+    # role_id: int = 3
 
     class Config:
         from_attributes = True
@@ -58,6 +58,11 @@ class UserInDB(BaseModel):
     password: str
     role_id: int
     is_active: bool = True
+
+
+class UserLogin(BaseModel):
+    username: str = Field()
+    password: str = Field()
 
 
 # ============================================================================

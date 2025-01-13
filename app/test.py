@@ -1,31 +1,171 @@
 # https://m.blog.naver.com/indy9052/221934084260
+from fastapi import FastAPI, HTTPException, Request
+from starlette.authentication import (
+    AuthenticationBackend,
+    AuthCredentials,
+    SimpleUser,
+    AuthenticationError,
+)
+from starlette.middleware import Middleware
+from starlette.middleware.authentication import AuthenticationMiddleware
+from starlette.responses import PlainTextResponse
+import base64
+import binascii
 
-from fastapi import FastAPI, Depends, HTTPException, Security
-from fastapi.security.api_key import APIKeyHeader
-from .authorization.token import SECRET_KEY
 
+# Define the authentication backend (Basic Auth)
+class BasicAuthBackend(AuthenticationBackend):
+    async def authenticate(self, conn):
+        if "Authorization" not in conn.headers:
+            return
+
+        auth = conn.headers["Authorization"]
+        try:
+            scheme, credentials = auth.split()
+            if scheme.lower() != "basic":
+                return
+            decoded = base64.b64decode(credentials).decode("ascii")
+        except (ValueError, UnicodeDecodeError, binascii.Error):
+            raise AuthenticationError("Invalid basic auth credentials")
+
+        username, _, password = decoded.partition(":")
+        # TODO: Verify the username and password, for now assume they're valid.
+        return AuthCredentials(["authenticated"]), SimpleUser(username)
+
+
+# Define the custom Authorization Middleware
+class AuthorizationMiddleware:
+    def __init__(self, app, allowed_roles: list):
+        self.app = app
+        self.allowed_roles = allowed_roles
+
+    async def __call__(self, scope, receive, send):
+        # Call the authentication middleware first
+        await self.app(scope, receive, send)
+
+        # After the authentication middleware, check the user's roles
+        user = scope.get("user")
+        if user and self.allowed_roles not in ["admin", "general", "manager"]:
+            # If the user does not have the required role, reject the request
+            response = PlainTextResponse("Forbidden", status_code=403)
+            await response(scope, receive, send)
+            return
+
+
+# Create FastAPI application instance
 app = FastAPI()
 
-API_KEY = "your-secret-api-key"
-API_KEY_NAME = "access_token"
-api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
+
+# Routes definition
+@app.get("/")
+async def homepage(request: Request):
+    # Check if the user is authenticated
+    if request.user.is_authenticated:
+        return PlainTextResponse(f"Hello, {request.user.display_name}")
+    return PlainTextResponse("Hello, you")
 
 
-def get_api_key(api_key_header: str = Security(api_key_header)):
-    if api_key_header == SECRET_KEY:
-        return api_key_header
-    else:
-        raise HTTPException(status_code=403, detail="Could not validate credentials")
+# Middleware configuration
+middleware = [
+    Middleware(
+        AuthenticationMiddleware, backend=BasicAuthBackend()
+    ),  # Add the Starlette AuthenticationMiddleware
+    Middleware(
+        AuthorizationMiddleware, allowed_roles="admin"
+    ),  # Add the custom AuthorizationMiddleware
+]
+
+# Set up the app with both middlewares
+app = FastAPI(middleware=middleware)
 
 
-@app.get("/protected-route")
-async def protected_route(api_key: str = Depends(get_api_key)):
-    return {"message": "You have access to this route"}
+# ----------------------------------------------------------
+# ------------- MIDDLEWARE UNDERSTANDING -------------------
+# ----------------------------------------------------------
 
+# from fastapi import FastAPI, APIRouter, Request, Response
+# from fastapi.responses import JSONResponse
+# from starlette.middleware.base import BaseHTTPMiddleware
+# from starlette.middleware.trustedhost import TrustedHostMiddleware
+#
+# app = FastAPI()
+#
+#
+# # Define the custom middleware m1
+# class MiddlewareM1(BaseHTTPMiddleware):
+#     async def dispatch(self, request: Request, call_next):
+#         print("Middleware m1: before processing")
+#         response = await call_next(request)
+#         print("Middleware m1: after processing")
+#         return response
+#
+#
+# # Define the custom middleware m2
+# class MiddlewareM2(BaseHTTPMiddleware):
+#     async def dispatch(self, request: Request, call_next):
+#         print("Middleware m2: before processing")
+#         response = await call_next(request)
+#         print("Middleware m2: after processing")
+#         return response
+#
+#
+# # Create routers
+# router1 = APIRouter()
+# router2 = APIRouter()
+#
+#
+# # Define route in router1
+# @router1.get("/route1")
+# async def route1():
+#     print("Inside router 1")
+#     return JSONResponse(content={"message": "Response from route 1"})
+#
+#
+# # Define route in router2
+# @router2.get("/route2")
+# async def route2():
+#     print("Inside router 2")
+#     return JSONResponse(content={"message": "Response from route 2"})
+#
+#
+# # Add the routers to the app
+# app.include_router(router1)
+# app.include_router(router2)
+#
+# # Apply middlewares to the app
+# app.add_middleware(MiddlewareM1)
+# app.add_middleware(MiddlewareM2)
 
-@app.get("/unprotected-route")
-async def unprotected_route():
-    return {"message": "This route is open to everyone"}
+# --------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+#
+# from fastapi import FastAPI, Depends, HTTPException, Security
+# from fastapi.security.api_key import APIKeyHeader
+# from .authorization.token import SECRET_KEY
+#
+# app = FastAPI()
+#
+# API_KEY = "your-secret-api-key"
+# API_KEY_NAME = "access_token"
+# api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
+#
+#
+# def get_api_key(api_key_header: str = Security(api_key_header)):
+#     if api_key_header == SECRET_KEY:
+#         return api_key_header
+#     else:
+#         raise HTTPException(status_code=403, detail="Could not validate credentials")
+#
+#
+# @app.get("/protected-route")
+# async def protected_route(api_key: str = Depends(get_api_key)):
+#     return {"message": "You have access to this route"}
+#
+#
+# @app.get("/unprotected-route")
+# async def unprotected_route():
+#     return {"message": "This route is open to everyone"}
 
 
 # from starlette.applications import Starlette
