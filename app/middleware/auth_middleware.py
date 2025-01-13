@@ -10,6 +10,7 @@ import threading
 from starlette.responses import JSONResponse
 
 from ..authorization import token
+from ..databases import schemas
 from jose import jwt, JWTError
 
 # from fastapi_users.authentication import BearerTransport
@@ -18,44 +19,76 @@ from jose import jwt, JWTError
 
 thread_local = threading.local()
 
+# https://github.com/jod35/fastapi-beyond-CRUD/blob/main/src/auth/dependencies.py#L79
+# https://jod35.github.io/fastapi-beyond-crud-docs/site/chapter10/
+
 
 class AuthenticationMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
-        if request.method == "GET" and path[1:] in [
-            "docs",
-            "openapi.json",
-            "favicon.ico",
-        ]:
-            response = await call_next(request)  # Make sure `call_next` is not None
-            return response
+        # if request.method == "GET" and path[1:] in [
+        #     "docs",
+        #     "openapi.json",
+        #     "favicon.ico",
+        # ]:
+        #     response = await call_next(request)  # Make sure `call_next` is not None
+        #     return response
 
-        response = await call_next(request)
-        auth = response.headers.get("Authenticate")
         if "login" in path:
-            if not auth:
+            response = await call_next(request)
+            author = response.headers.get("Authorization")
+            if not author:
                 return JSONResponse(
                     "Incorrect username or password",
                     401,
                     {"WWW-Authenticate": "Bearer"},
                 )
-            token_type, access_token = auth.split(" ")
+            token_type, access_token = author.split(" ")
             return JSONResponse(
                 content={"token_type": token_type, "access_token": access_token},
                 headers={"WWW-Authenticate": "Bearer"},
             )
+            # if not author:
+            #     return JSONResponse(
+            #         "Incorrect username or password",
+            #         401,
+            #         {"WWW-Authenticate": "Basic"},
+            #     )
+            # token_type, access_token = author.split(" ")
+            # return JSONResponse(
+            #     content={"token_type": token_type, "access_token": access_token},
+            #     headers={"WWW-Authenticate": "Basic"},
+            # )
         response = await call_next(request)
         return response
 
 
 class AuthorizationMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-
-        if not request.headers.get("Authenticate"):
-            response = await call_next(request)
+        if request.method == "GET" and request.url.path[1:] in [
+            "docs",
+            "openapi.json",
+            "favicon.ico",
+        ]:
+            response = await call_next(request)  # Make sure `call_next` is not None
             return response
-
         response = await call_next(request)
+        auth = request.headers.get("authorization")
+        if "login" in request.url.path:
+            return response
+        if auth:
+            # token_type, access_token = (auth or " ").split(" ", 1)
+            token_data = token.verify_token(auth)
+            if not isinstance(token_data, schemas.TokenData):
+                return JSONResponse("Token Expired", 403)
+            if request.method != "GET" and token_data.role_id == 3:
+                return JSONResponse(
+                    "Not Authorization", 403, {"WWW-Authenticate": "Bearer"}
+                )
+
+        else:
+            return JSONResponse("Not Authorized", 403, {"WWW-Authenticate": "Bearer"})
+        # response = await call_next(request)
         return response
 
 
@@ -91,45 +124,46 @@ class AuthorizationMiddleware(BaseHTTPMiddleware):
 #             raise AuthenticationError("Invalid JWT Token.")
 #         return auth, user
 
+#
+# from fastapi import Request, HTTPException
+# from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+#
+# from ..authorization.token import decode_jwt
+#
+#
+# class JWTBearer(HTTPBearer):
+#     def __init__(self, auto_error: bool = True):
+#         super(JWTBearer, self).__init__(auto_error=auto_error)
+#
+#     async def __call__(self, request: Request):
+#         credentials: HTTPAuthorizationCredentials = await super(
+#             JWTBearer, self
+#         ).__call__(request)
+#         if credentials:
+#             if not credentials.scheme == "Bearer":
+#                 raise HTTPException(
+#                     status_code=403, detail="Invalid authentication scheme."
+#                 )
+#             token_data = token.verify_token(credentials.credentials)
+#             if not token_data:  # Handle invalid or expired token
+#                 raise HTTPException(
+#                     status_code=403, detail="Invalid token or expired token."
+#                 )
+#             return credentials.credentials
+#         else:
+#             raise HTTPException(status_code=403, detail="Invalid authorization code.")
 
-from fastapi import Request, HTTPException
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-
-from ..authorization.token import decode_jwt
-
-
-class JWTBearer(HTTPBearer):
-    def __init__(self, auto_error: bool = True):
-        super(JWTBearer, self).__init__(auto_error=auto_error)
-
-    async def __call__(self, request: Request):
-        credentials: HTTPAuthorizationCredentials = await super(
-            JWTBearer, self
-        ).__call__(request)
-        if credentials:
-            if not credentials.scheme == "Bearer":
-                raise HTTPException(
-                    status_code=403, detail="Invalid authentication scheme."
-                )
-            if not self.verify_jwt(credentials.credentials):
-                raise HTTPException(
-                    status_code=403, detail="Invalid token or expired token."
-                )
-            return credentials.credentials
-        else:
-            raise HTTPException(status_code=403, detail="Invalid authorization code.")
-
-    def verify_jwt(self, jwtoken: str) -> bool:
-        isTokenValid: bool = False
-
-        try:
-            payload = decode_jwt(jwtoken)
-        except:
-            payload = None
-        if payload:
-            isTokenValid = True
-
-        return isTokenValid
+# def verify_jwt(self, jwtoken: str) -> bool:
+#     isTokenValid: bool = False
+#
+#     try:
+#         payload = decode_jwt(jwtoken)
+#     except:
+#         payload = None
+#     if payload:
+#         isTokenValid = True
+#
+#     return isTokenValid
 
 
 #

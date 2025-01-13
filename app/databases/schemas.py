@@ -1,5 +1,5 @@
 from fastapi import HTTPException
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
 from ..authorization import hashing
 
@@ -12,12 +12,12 @@ def validate(values):
                     raise HTTPException(
                         status_code=422, detail=f"{field.capitalize()} cannot be empty"
                     )
-                if field == "password" and value:
-                    values["password"] = hashing.bcrypt("".join(value.split()))
-                elif field == "username":
-                    values["username"] = "".join(value.split()).capitalize()
-                elif field == "email" and value:
-                    values["email"] = "".join(value.split()).lower()
+                # if field == "password" and value:
+                #     values["password"] = hashing.bcrypt("".join(value.split()))
+                # elif field == "username":
+                #     values["username"] = "".join(value.split()).capitalize()
+                # elif field == "email" and value:
+                #     values["email"] = "".join(value.split()).lower()
     return values
 
 
@@ -32,12 +32,13 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     email: EmailStr | None = None
     password: str
+    role_id: int = 3
 
-    # # noinspection PyNestedDecorators
-    # @model_validator(mode="before")
-    # @classmethod
-    # def field_validations(cls, values):
-    #     return validate(values)
+    # noinspection PyNestedDecorators
+    @model_validator(mode="before")
+    @classmethod
+    def field_validations(cls, values):
+        return validate(values)
 
 
 class ShowUser(UserBase):
@@ -46,7 +47,6 @@ class ShowUser(UserBase):
 
 
 class UserUpdate(BaseModel):
-    username: str | None = None
     email: EmailStr | None = None
     password: str | None = None
     role_id: int | None = None
@@ -93,3 +93,4 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: str | None = None
+    role_id: int | None = None

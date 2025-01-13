@@ -2,6 +2,7 @@ from typing import List, Union
 
 from fastapi import APIRouter, status, Depends, HTTPException
 from sqlalchemy.orm import Session
+from starlette.authentication import requires
 from starlette.responses import JSONResponse
 
 from . import is_user_exist
@@ -10,25 +11,28 @@ from . import is_user_exist
 from ..authorization import hashing, oauth2, token
 from ..databases import schemas, get_db
 
-from ..middleware.auth_middleware import AuthorizationMiddleware
 from ..models import user_model
 
-router = APIRouter(prefix="/users", tags=["Users"])
+router = APIRouter(
+    prefix="/users",
+    tags=["Users"],
+    dependencies=[Depends(oauth2.get_api_key)],
+)
+
+admin_and_manager_role_checker = Depends(oauth2.RoleChecker([1, 2]))
+all_role_checker = Depends(oauth2.RoleChecker([1, 2, 3]))
 
 
 @router.post(
     "/",
-    # dependencies=[Depends(AuthenticationMiddleware)],
     status_code=status.HTTP_201_CREATED,
-    response_model=Union[schemas.ShowUser, schemas.UserBase],
+    response_model=schemas.ShowUser,
     response_model_exclude={"password"},
     summary="새로운 회원 등록",
     description="새로운 회원의 정보를 추가 합니다.",
 )
 async def create_user(
-    user: schemas.UserCreate = Depends(),
-    db: Session = Depends(get_db),
-    # current_user: schemas.UserInDB = Depends(oauth2.get_current_user),
+    user: schemas.UserCreate = Depends(), db: Session = Depends(get_db)
 ):
     user_data = user.model_dump(exclude_unset=True)
     new_user = user_model.User(**user_data)
@@ -41,7 +45,7 @@ async def create_user(
         if new_user.email:
             return user
 
-        return JSONResponse(token.sign_jwt(new_user.username))
+        return user
     except:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -52,21 +56,17 @@ async def create_user(
 @router.get(
     "/",
     response_model=List[schemas.UserBase],
-    # dependencies=[Depends(AuthorizationMiddleware)],
     status_code=status.HTTP_200_OK,
     summary="회원 목록 조회",
     description="전체 회원의 username 목록을 list 형태로 출력 합니다.",
 )
-async def get_users(
-    db: Session = Depends(get_db),
-    # current_user: schemas.UserInDB = Depends(oauth2.check_role(3)),
-):
+async def get_users(db: Session = Depends(get_db)):
     return db.query(user_model.User).filter(user_model.User.is_active == True).all()
 
 
 @router.get(
     "/{username}",
-    response_model=Union[schemas.UserBase, schemas.ShowUser],
+    response_model=schemas.ShowUser,
     status_code=status.HTTP_200_OK,
     summary="특정 회원 정보 조회",
     description="username에 해당 하는 회원 정보를 조회 합니다.",
@@ -77,11 +77,8 @@ async def get_user(
     # current_user: schemas.UserInDB = Depends(oauth2.check_role(3)),
 ):
     # username = "".join(username.split()).capitalize()
-    user = is_user_exist(username, True, db)
-    if user.email:
-        return user
-
-    return schemas.UserBase(username=user.username, role_id=user.role_id)
+    # user = is_user_exist(username, True, db)
+    return is_user_exist(username, True, db)
 
 
 @router.put(
@@ -94,7 +91,7 @@ async def get_user(
 )
 async def update_user(
     username: str,
-    updated_user: schemas.UserUpdate,
+    updated_user: schemas.UserUpdate = Depends(),
     db: Session = Depends(get_db),
     # current_user: schemas.UserInDB = Depends(oauth2.check_role(2)),
 ):
@@ -104,17 +101,10 @@ async def update_user(
 
     try:
         for key, value in update_data.items():
-            # if not "".join(value.split()):
-            #     raise HTTPException(
-            #         status_code=422, detail=f"{key.capitalize()} cannot be empty"
-            #     )
-            if key == "password":
-                value = hashing.bcrypt(value)
-            # elif key == "username":
-            #     value = "".join(value.split()).capitalize()
-            # elif key == "email":
-            #     value = "".join(value.split()).lower()
-            setattr(user, key, value)
+            if value:
+                if key == "password":
+                    value = hashing.bcrypt(value)
+                setattr(user, key, value)
 
         db.commit()
         db.refresh(user)
