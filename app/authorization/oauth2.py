@@ -5,8 +5,9 @@ from starlette.responses import JSONResponse
 
 from . import hashing
 from .token import verify_token
-from ..databases import get_db, schemas
-from ..models import user_model
+from ..databases.database import get_db
+from ..databases import user_model
+from ..models import schemas
 from typing import List, Any
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")

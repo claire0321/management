@@ -1,17 +1,15 @@
-from typing import List, Union
+from typing import List
 
 from fastapi import APIRouter, status, Depends, HTTPException
 from sqlalchemy.orm import Session
-from starlette.authentication import requires
-from starlette.responses import JSONResponse
 
-from . import is_user_exist
+from app.routers import is_user_exist
 
-# from .authentication import login_for_access_token
-from ..authorization import hashing, oauth2, token
-from ..databases import schemas, get_db
+from ..authorization import hashing, oauth2
+from ..databases.database import get_db
+from ..databases import user_model
 
-from ..models import user_model
+from ..models import schemas
 
 router = APIRouter(
     prefix="/users",
@@ -74,11 +72,8 @@ async def get_users(db: Session = Depends(get_db)):
 async def get_user(
     username: str,
     db: Session = Depends(get_db),
-    # current_user: schemas.UserInDB = Depends(oauth2.check_role(3)),
 ):
-    # username = "".join(username.split()).capitalize()
-    # user = is_user_exist(username, True, db)
-    return is_user_exist(username, True, db)
+    return is_user_exist(username, db)
 
 
 @router.put(
@@ -91,12 +86,10 @@ async def get_user(
 )
 async def update_user(
     username: str,
-    updated_user: schemas.UserUpdate = Depends(),
+    updated_user: schemas.UserUpdate,
     db: Session = Depends(get_db),
-    # current_user: schemas.UserInDB = Depends(oauth2.check_role(2)),
 ):
-    # username = "".join(username.split()).capitalize()
-    user = is_user_exist(username, True, db)
+    user = is_user_exist(username, db)
     update_data = updated_user.model_dump(exclude_unset=True)
 
     try:
@@ -112,7 +105,7 @@ async def update_user(
         return user
     except:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
+            status_code=409,
             detail=f"Invalid values to be updated",
         )
 
@@ -126,9 +119,8 @@ async def update_user(
 async def delete_user(
     username: str,
     db: Session = Depends(get_db),
-    # current_user: schemas.UserInDB = Depends(oauth2.check_role(2)),
 ):
-    user = is_user_exist(username, True, db)
+    user = is_user_exist(username, db)
     db.delete(user)
     db.commit()
     return {"message": f"User '{username}' deleted successfully"}
@@ -143,10 +135,8 @@ async def delete_user(
 async def activate_user(
     username: str,
     db: Session = Depends(get_db),
-    # current_user: schemas.UserInDB = Depends(oauth2.check_role(2)),
 ):
-    # username = username.capitalize()
-    user = is_user_exist(username, False, db)
+    user = is_user_exist(username, db)
     try:
         user.is_active = True
         db.commit()
@@ -170,9 +160,8 @@ async def activate_user(
 async def deactivate_user(
     username: str,
     db: Session = Depends(get_db),
-    # current_user: schemas.UserInDB = Depends(oauth2.get_current_active_user),
 ):
-    user = is_user_exist(username, True, db)
+    user = is_user_exist(username, db)
 
     try:
         user.is_active = False

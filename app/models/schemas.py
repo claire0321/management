@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from pydantic import BaseModel, EmailStr, Field, model_validator
 
-from ..authorization import hashing
+from app.authorization import hashing
 
 
 def validate(values):
@@ -12,18 +12,13 @@ def validate(values):
                     raise HTTPException(
                         status_code=422, detail=f"{field.capitalize()} cannot be empty"
                     )
-                # if field == "password" and value:
-                #     values["password"] = hashing.bcrypt("".join(value.split()))
-                # elif field == "username":
-                #     values["username"] = "".join(value.split()).capitalize()
-                # elif field == "email" and value:
-                #     values["email"] = "".join(value.split()).lower()
+                if field == "password" and value:
+                    values["password"] = hashing.bcrypt("".join(value.split()))
     return values
 
 
 class UserBase(BaseModel):
     username: str
-    # role_id: int = 3
 
     class Config:
         from_attributes = True

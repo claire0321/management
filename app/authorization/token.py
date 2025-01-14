@@ -1,16 +1,11 @@
 import os
 from datetime import datetime, timedelta, timezone
-from typing import Dict
-import time
 
 import jwt
-from cryptography.hazmat.primitives.serialization import load_pem_public_key
-from cryptography.x509 import load_pem_x509_certificate
 from dotenv import load_dotenv
-from jwt import InvalidTokenError
 from starlette.responses import JSONResponse
 
-from ..databases import schemas
+from ..models import schemas
 
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -18,7 +13,7 @@ ALGORITHM = os.getenv("ALGORITHM")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
 
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
+def create_access_token(data: dict):
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     
@@ -38,7 +33,7 @@ def verify_token(token: str):
                 headers={"WWW-Authenticate": "Bearer"},
             )
         return schemas.TokenData(username=username, role_id=role_id)
-    except InvalidTokenError:
+    except jwt.InvalidTokenError:
         return JSONResponse(
             status_code=403,
             content="Could not validate credentials",

@@ -1,14 +1,10 @@
-from datetime import timedelta
-
-from fastapi import APIRouter, Depends, HTTPException, status, Security, Header
-from typing import Annotated
+from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from starlette.responses import JSONResponse
 
 from ..authorization import oauth2, token
-from ..databases import get_db, schemas
-
+from ..databases.database import get_db
 
 router = APIRouter(tags=["authentication"])
 

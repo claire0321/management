@@ -3,7 +3,7 @@ from fastapi.security import HTTPBearer
 from fastapi.security.http import HTTPAuthorizationCredentials
 
 from . import verify_token
-from ..exceptions import InvalidToken
+from app.error.exceptions import InvalidToken
 
 
 class TokenBearer(HTTPBearer):

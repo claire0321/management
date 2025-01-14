@@ -4,12 +4,20 @@ from fastapi import FastAPI
 from fastapi.requests import Request
 from fastapi.responses import JSONResponse
 from starlette.status import HTTP_403_FORBIDDEN, HTTP_404_NOT_FOUND
+from dataclasses import dataclass
 
 
 class UserException(Exception):
     """This is the base class for all user errors"""
 
     pass
+
+
+@dataclass
+class UserNotFound(UserException):
+    """User Not found"""
+
+    username: str
 
 
 class InvalidToken(UserException):
@@ -62,12 +70,6 @@ class RoleNotFound(UserException):
 
 class RoleAlreadyExists(UserException):
     """Role already exists"""
-
-    pass
-
-
-class UserNotFound(UserException):
-    """User Not found"""
 
     pass
 

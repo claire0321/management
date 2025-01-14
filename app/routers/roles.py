@@ -3,9 +3,9 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-
-from ..databases import get_db, schemas
-from ..models import role_model
+from app.databases.database import get_db
+from app.databases import role_model
+from ..models import schemas
 
 # from ..databases import get_db, models, schemas
 
