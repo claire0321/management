@@ -1,16 +1,15 @@
 from typing import List, Optional
 
 from fastapi import APIRouter, status, Depends, HTTPException
-from sqlalchemy.orm import Session
+from pydantic import ValidationError
 from sqlalchemy import desc, asc
+from sqlalchemy.orm import Session
 
-from app.routers import is_user_exist
 from app.authorization import hashing, oauth2
 from app.databases import user_model, database
 from app.error.exceptions import EmptyField
 from app.models import schemas
-
-from pydantic import ValidationError
+from app.routers import is_user_exist
 
 router = APIRouter(
     prefix="/users",
@@ -45,11 +44,11 @@ async def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         return user
     except ValidationError as e:
         print(e)
-    except:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Username '{user.username}' already exists",
-        )
+    # except:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_409_CONFLICT,
+    #         detail=f"Username '{user.username}' already exists",
+    #     )
 
 
 @router.get(

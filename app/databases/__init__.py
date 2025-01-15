@@ -1,5 +1,6 @@
-from app.database import Base
 from sqlalchemy import Column, Integer, DateTime, func
+
+from app.databases.database import Base
 
 
 class BaseModel(Base):
