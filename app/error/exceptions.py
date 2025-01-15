@@ -30,6 +30,12 @@ class UserNotFound(UserException):
     pass
 
 
+class UserAlreadyExists(UserException):
+    """User has provided an email for a user who exists during sign up."""
+
+    pass
+
+
 class UserAlreadyInActive(UserException):
     """User already in active status"""
 
@@ -61,6 +67,12 @@ class InvalidDataType(FieldException):
     pass
 
 
+class InsufficientSpace(FieldException):
+    """Should not have a space"""
+
+    pass
+
+
 # =====================================================================
 
 
@@ -84,12 +96,6 @@ class AccessTokenRequired(UserException):
 
 class RefreshTokenRequired(UserException):
     """User has provided an access token when a refresh token is needed"""
-
-    pass
-
-
-class UserAlreadyExists(UserException):
-    """User has provided an email for a user who exists during sign up."""
 
     pass
 

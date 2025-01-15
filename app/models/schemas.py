@@ -3,21 +3,27 @@ from typing import Annotated, Optional
 from pydantic import BaseModel, EmailStr, Field, model_validator
 
 from app.authorization import hashing
-from app.error.exceptions import EmptyField, InvalidUsername, InvalidDataType
+from app.error.exceptions import EmptyField, InvalidUsername, InvalidDataType, InsufficientSpace
 
 
-def validate(values):
+def validate(values: dict):
     excluded_fields = {"role_id", "is_active"}
     for field, value in values.items():
         # Skip excluded fields
         if field in excluded_fields:
-            if (field == "role_id" and not value.isdigit()) or (field == "is_active" and not value.isbool()):
+            if (field == "role_id" and not isinstance(value, int)) or (
+                field == "is_active" and not isinstance(value, bool)
+            ):
                 raise InvalidDataType
             continue
 
         # Check if the value is empty or consists of only whitespace
         if value and not "".join(value.split()):
             raise EmptyField(field)
+
+        # Check if the value contains any space
+        if " " in value:
+            raise InsufficientSpace(field)
 
         # Check if username is alphanum
         if field == "username" and not value.isalnum():
@@ -39,6 +45,17 @@ class UserBase(BaseModel):
     class Config:
         from_attributes = True
 
+        model_config = {
+            "json_schema_extra": {
+                "example": {
+                    "username": "Bob",
+                    "email": "Bob@example.com",
+                    "password": "password",
+                    "role_id": 1,
+                }
+            }
+        }
+
 
 class UserCreate(UserBase):
     # noinspection PyNestedDecorators
@@ -49,7 +66,7 @@ class UserCreate(UserBase):
 
 
 class UserUpdate(BaseModel):
-    # username: str
+    username: str
     email: Optional[EmailStr] = None
     password: Optional[str] = None
     role_id: Optional[int] = None

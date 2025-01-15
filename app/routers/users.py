@@ -1,13 +1,12 @@
-from typing import List, Optional
+from typing import List, Optional, Annotated
 
-from fastapi import APIRouter, status, Depends, HTTPException
-from pydantic import ValidationError
+from fastapi import APIRouter, status, Depends, HTTPException, Body
 from sqlalchemy import desc, asc
 from sqlalchemy.orm import Session
 
-from app.authorization import hashing, oauth2
+from app.authorization import oauth2
 from app.databases import user_model, database
-from app.error.exceptions import EmptyField
+from app.error.exceptions import EmptyField, InsufficientSpace, UserAlreadyExists
 from app.models import schemas
 from app.routers import is_user_exist
 
@@ -29,26 +28,34 @@ get_db = database.get_db
     summary="새로운 회원 등록",
     description="새로운 회원의 정보를 추가 합니다.",
 )
-async def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+async def create_user(
+    user: Annotated[
+        schemas.UserCreate,
+        Body(
+            examples=[
+                {
+                    "username": "username",
+                    "password": "password",
+                    "email": "user@example.com",
+                    "role_id": 3,
+                }
+            ]
+        ),
+    ],
+    db: Session = Depends(get_db),
+):
     user_data = user.model_dump(exclude_unset=True)
+    user_data["password"] = user.password
     new_user = user_model.User(**user_data)
-    new_user.password = hashing.bcrypt(user.password)
+
     try:
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
 
-        if new_user.email:
-            return user
-
         return user
-    except ValidationError as e:
-        print(e)
-    # except:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_409_CONFLICT,
-    #         detail=f"Username '{user.username}' already exists",
-    #     )
+    except:
+        raise UserAlreadyExists(user.username)
 
 
 @router.get(
@@ -79,31 +86,34 @@ async def get_user(
 ):
     if not "".join(username.split()):
         raise EmptyField("Username")
+    if " " in username:
+        raise InsufficientSpace("Username")
     return is_user_exist(username=username, db=db)
 
 
 @router.put(
     "/{username}/update",
-    response_model=schemas.UserUpdate,
+    response_model=schemas.UserBase,
     response_model_exclude={"password"},
     status_code=status.HTTP_200_OK,
     summary="회원 정보 업데이트",
     description="username에 해당 하는 회원 정보를 수정 합니다. 수정 가능한 항목: password, email",
 )
 async def update_user(
-    username: str,
     updated_user: schemas.UserUpdate,
     db: Session = Depends(get_db),
 ):
-    # username = updated_user.username
+    username = updated_user.username
+    if " " in username:
+        raise InsufficientSpace("Username")
     user = is_user_exist(username=username, db=db)
     update_data = updated_user.model_dump(exclude_unset=True)
 
     try:
         for key, value in update_data.items():
             if value:
-                if key == "password":
-                    value = hashing.bcrypt(value)
+                # if key == "password":
+                #     value = hashing.bcrypt(value)
                 setattr(user, key, value)
 
         db.commit()

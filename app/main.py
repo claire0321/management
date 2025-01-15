@@ -11,6 +11,8 @@ from app.error.error_handler import (
     empty_field_exception_handler,
     invalid_username_not_alphanum_exception_handler,
     invalid_data_type_exception_handler,
+    insufficient_space_exception_handler,
+    not_unique_username_exception_handler,
 )
 from app.error.exceptions import *
 from app.middleware import auth_middleware
@@ -38,6 +40,8 @@ def exception_handler():
     app.add_exception_handler(EmptyField, empty_field_exception_handler)
     app.add_exception_handler(InvalidUsername, invalid_username_not_alphanum_exception_handler)
     app.add_exception_handler(InvalidDataType, invalid_data_type_exception_handler)
+    app.add_exception_handler(InsufficientSpace, insufficient_space_exception_handler)
+    app.add_exception_handler(UserAlreadyExists, not_unique_username_exception_handler)
 
 
 def create_app():
