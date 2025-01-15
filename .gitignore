@@ -3,4 +3,7 @@ README.md
 .venv
 .env
 
-test.py
+app/test.py
+
+# poetry.lock
+# pyproject.toml
