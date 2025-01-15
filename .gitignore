@@ -2,3 +2,5 @@ README.md
 .vscode
 .venv
 .env
+
+test.py
