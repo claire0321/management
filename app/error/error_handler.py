@@ -1,9 +1,7 @@
-from fastapi import Request, status
-from pydantic import ValidationError
+from fastapi import Request
 from starlette.responses import JSONResponse
-from app.error.exceptions import *
 
-from app.error import AuthBackendException
+from app.error.exceptions import *
 
 
 def auth_error_handler(request: Request, exc: AuthBackendException):
@@ -19,9 +17,7 @@ async def not_found_exception_handler(request: Request, exc: UserNotFound):
 
 
 async def user_already_active_exception_handler(request: Request, exc: UserNotFound):
-    return JSONResponse(
-        status_code=409, content=f"User '{exc.username}' is already in active."
-    )
+    return JSONResponse(status_code=409, content=f"User '{exc.username}' is already in active.")
 
 
 async def empty_field_exception_handler(request: Request, exc: EmptyField):
@@ -31,18 +27,15 @@ async def empty_field_exception_handler(request: Request, exc: EmptyField):
     )
 
 
-async def invalid_username_not_alphanum_exception_handler(
-    request, exc: InvalidUsername
-):
+async def invalid_username_not_alphanum_exception_handler(request, exc: InvalidUsername):
     return JSONResponse(
         status_code=422,
         content=f"Username should be alphanum.",
     )
 
 
-async def validation_exception_handler(request: Request, exc: ValidationError):
-    errors = [{"field": err["loc"][0], "message": err["msg"]} for err in exc.errors()]
+async def invalid_data_type_exception_handler(request: Request, exc: EmptyField):
     return JSONResponse(
         status_code=422,
-        content={"message": "Validation Error", "details": errors},
+        content={"message": "Validation Error. Please provide a valid data type."},
     )

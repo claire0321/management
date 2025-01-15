@@ -1,11 +1,10 @@
-from pydantic import ValidationError
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from app.authorization import token
+from app.error.exceptions import AuthBackendException
 from app.models import schemas
-from app.error import AuthBackendException
 
 BASIC_PATH = ["/docs", "/openapi.json", "/favicon.ico"]
 
@@ -32,9 +31,6 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             # Handle specific AuthBackendException
             if self.on_error:
                 return self.on_error(request, e)
-        except ValidationError as e:
-            if self.on_error:
-                return self.on_error(request, e)
 
 
 class AuthorizationMiddleware(BaseHTTPMiddleware):
@@ -47,12 +43,8 @@ class AuthorizationMiddleware(BaseHTTPMiddleware):
                 if not isinstance(token_data, schemas.TokenData):
                     return JSONResponse("Token Expired", 403)
                 if request.method != "GET" and token_data.role_id == 3:
-                    return JSONResponse(
-                        "Not Authorization", 403, {"WWW-Authenticate": "Bearer"}
-                    )
+                    return JSONResponse("Not Authorization", 403, {"WWW-Authenticate": "Bearer"})
             else:
-                return JSONResponse(
-                    "Not Authorized", 403, {"WWW-Authenticate": "Bearer"}
-                )
+                return JSONResponse("Not Authorized", 403, {"WWW-Authenticate": "Bearer"})
         response = await call_next(request)
         return response

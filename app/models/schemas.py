@@ -1,8 +1,9 @@
-from fastapi import HTTPException
-from pydantic import BaseModel, EmailStr, Field, model_validator
 from typing import Annotated, Optional
+
+from pydantic import BaseModel, EmailStr, Field, model_validator
+
 from app.authorization import hashing
-from app.error.exceptions import EmptyField, InvalidUsername
+from app.error.exceptions import EmptyField, InvalidUsername, InvalidDataType
 
 
 def validate(values):
@@ -10,6 +11,8 @@ def validate(values):
     for field, value in values.items():
         # Skip excluded fields
         if field in excluded_fields:
+            if (field == "role_id" and not value.isdigit()) or (field == "is_active" and not value.isbool()):
+                raise InvalidDataType
             continue
 
         # Check if the value is empty or consists of only whitespace

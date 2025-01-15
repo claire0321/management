@@ -1,6 +1,21 @@
 from dataclasses import dataclass
 from typing import Optional
 
+unauthorized_value = 401
+
+
+### TOD: dataclass 디코레이터 있는데 굳이 __init__ 한 이유?
+@dataclass
+class AuthBackendException(Exception):
+    statusCode: Optional[int] = unauthorized_value
+    errorCode: Optional[str] = "UNAUTHORIZED"
+
+    def __init__(self, statusCode=None, errorCode=None):
+        if statusCode:
+            self.statusCode: int = statusCode
+        if errorCode:
+            self.errorCode: str = errorCode
+
 
 @dataclass
 class UserException(Exception):
@@ -36,6 +51,12 @@ class EmptyField(FieldException):
 
 class InvalidUsername(FieldException):
     """Invalid username having alphanum"""
+
+    pass
+
+
+class InvalidDataType(FieldException):
+    """Invalid data type"""
 
     pass
 
