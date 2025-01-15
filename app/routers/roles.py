@@ -3,18 +3,16 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.databases.database import get_db
-from app.databases import role_model
-from ..models import schemas
 
-# from ..databases import get_db, models, schemas
+from app.databases import role_model, database
+from app.models import schemas
 
 router = APIRouter(prefix="/role", tags=["Role"])
 
+get_db = database.get_db
 
-@router.post(
-    "/", status_code=201, summary="New Role created", response_model=schemas.RoleBase
-)
+
+@router.post("/", status_code=201, summary="New Role created", response_model=schemas.RoleBase)
 def create_role(role: schemas.RoleBase = Depends(), db: Session = Depends(get_db)):
     role_data = role.model_dump()
     new_role = role_model.Role(**role_data)
@@ -32,9 +30,7 @@ def create_role(role: schemas.RoleBase = Depends(), db: Session = Depends(get_db
         )
 
 
-@router.get(
-    "/all_roles", response_model=List[schemas.RoleBase], status_code=status.HTTP_200_OK
-)
+@router.get("/all_roles", response_model=List[schemas.RoleBase], status_code=status.HTTP_200_OK)
 def get_roles(db: Session = Depends(get_db)):
     return db.query(role_model.Role).all()
 
@@ -50,9 +46,7 @@ def get_roles(db: Session = Depends(get_db)):
 
 
 @router.put("/", status_code=200, response_model=schemas.RoleBase)
-def update_role(
-    role: str, update_role: schemas.RoleBase, db: Session = Depends(get_db)
-):
+def update_role(role: str, update_role: schemas.RoleBase, db: Session = Depends(get_db)):
     role = "".join(role.split).lower()
     role_db = db.query(role_model.Role).filter(role_model.Role.name == role).first()
 

@@ -1,34 +1,43 @@
 from fastapi import HTTPException
 from pydantic import BaseModel, EmailStr, Field, model_validator
-
+from typing import Annotated, Optional
 from app.authorization import hashing
+from app.error.exceptions import EmptyField, InvalidUsername
 
 
 def validate(values):
+    excluded_fields = {"role_id", "is_active"}
     for field, value in values.items():
-        if field != "role_id":
-            if value:
-                if not "".join(value.split()):
-                    raise HTTPException(
-                        status_code=422, detail=f"{field.capitalize()} cannot be empty"
-                    )
-                if field == "password" and value:
-                    values["password"] = hashing.bcrypt("".join(value.split()))
+        # Skip excluded fields
+        if field in excluded_fields:
+            continue
+
+        # Check if the value is empty or consists of only whitespace
+        if value and not "".join(value.split()):
+            raise EmptyField(field)
+
+        # Check if username is alphanum
+        if field == "username" and not value.isalnum():
+            raise InvalidUsername
+
+        # Hash password
+        if field == "password" and value:
+            values["password"] = hashing.bcrypt("".join(value.split()))
     return values
 
 
 class UserBase(BaseModel):
     username: str
+    email: Optional[EmailStr] = None
+    role_id: int = 3
+    password: Annotated[str, Field(exclude=True)]
+    is_active: Annotated[bool, Field(exclude=True)] = True
 
     class Config:
         from_attributes = True
 
 
 class UserCreate(UserBase):
-    email: EmailStr | None = None
-    password: str
-    role_id: int = 3
-
     # noinspection PyNestedDecorators
     @model_validator(mode="before")
     @classmethod
@@ -36,28 +45,17 @@ class UserCreate(UserBase):
         return validate(values)
 
 
-class ShowUser(UserBase):
-    email: EmailStr | None = None
-    role_id: int
-
-
 class UserUpdate(BaseModel):
-    email: EmailStr | None = None
-    password: str | None = None
-    role_id: int | None = None
+    # username: str
+    email: Optional[EmailStr] = None
+    password: Optional[str] = None
+    role_id: Optional[int] = None
 
-
-class UserInDB(BaseModel):
-    username: str
-    email: EmailStr | None = None
-    password: str
-    role_id: int
-    is_active: bool = True
-
-
-class UserLogin(BaseModel):
-    username: str = Field()
-    password: str = Field()
+    # noinspection PyNestedDecorators
+    @model_validator(mode="before")
+    @classmethod
+    def field_validations(cls, values):
+        return validate(values)
 
 
 # ============================================================================
@@ -68,16 +66,7 @@ class RoleBase(BaseModel):
     description: str
 
 
-class RoleName(RoleBase):
-    role_id: int
-
-
 # ============================================================================
-
-
-# class Login(BaseModel):
-#     email: str
-#     password: str
 
 
 class Token(BaseModel):
@@ -87,5 +76,5 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    username: str | None = None
-    role_id: int | None = None
+    username: Optional[str] = None
+    role_id: Optional[int] = None

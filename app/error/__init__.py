@@ -16,4 +16,4 @@ class AuthBackendException(Exception):
             self.errorCode: str = errorCode
 
 
-## TODO: dataclass 디코레이터 있는데 굳이 __init__ 한 이유?
+### TOD: dataclass 디코레이터 있는데 굳이 __init__ 한 이유?

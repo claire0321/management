@@ -1,15 +1,16 @@
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, status, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import desc, asc
 
 from app.routers import is_user_exist
+from app.authorization import hashing, oauth2
+from app.databases import user_model, database
+from app.error.exceptions import EmptyField
+from app.models import schemas
 
-from ..authorization import hashing, oauth2
-from ..databases.database import get_db
-from ..databases import user_model
-
-from ..models import schemas
+from pydantic import ValidationError
 
 router = APIRouter(
     prefix="/users",
@@ -17,21 +18,19 @@ router = APIRouter(
     dependencies=[Depends(oauth2.get_api_key)],
 )
 
-admin_and_manager_role_checker = Depends(oauth2.RoleChecker([1, 2]))
-all_role_checker = Depends(oauth2.RoleChecker([1, 2, 3]))
+get_db = database.get_db
 
 
 @router.post(
     "/",
     status_code=status.HTTP_201_CREATED,
-    response_model=schemas.ShowUser,
+    response_model=schemas.UserBase,
+    response_model_exclude_unset=True,
     response_model_exclude={"password"},
     summary="새로운 회원 등록",
     description="새로운 회원의 정보를 추가 합니다.",
 )
-async def create_user(
-    user: schemas.UserCreate = Depends(), db: Session = Depends(get_db)
-):
+async def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     user_data = user.model_dump(exclude_unset=True)
     new_user = user_model.User(**user_data)
     new_user.password = hashing.bcrypt(user.password)
@@ -44,6 +43,8 @@ async def create_user(
             return user
 
         return user
+    except ValidationError as e:
+        print(e)
     except:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -58,13 +59,17 @@ async def create_user(
     summary="회원 목록 조회",
     description="전체 회원의 username 목록을 list 형태로 출력 합니다.",
 )
-async def get_users(db: Session = Depends(get_db)):
-    return db.query(user_model.User).filter(user_model.User.is_active == True).all()
+async def get_users(order_by: Optional[str] = None, db: Session = Depends(get_db)):
+    query = db.query(user_model.User).filter(user_model.User.is_active == True)
+    if order_by == "desc":
+        return query.order_by(desc(user_model.User.username)).all()
+    else:
+        return query.order_by(asc(user_model.User.username)).all()
 
 
 @router.get(
     "/{username}",
-    response_model=schemas.ShowUser,
+    response_model=schemas.UserBase,
     status_code=status.HTTP_200_OK,
     summary="특정 회원 정보 조회",
     description="username에 해당 하는 회원 정보를 조회 합니다.",
@@ -73,7 +78,9 @@ async def get_user(
     username: str,
     db: Session = Depends(get_db),
 ):
-    return is_user_exist(username, db)
+    if not "".join(username.split()):
+        raise EmptyField("Username")
+    return is_user_exist(username=username, db=db)
 
 
 @router.put(
@@ -89,7 +96,8 @@ async def update_user(
     updated_user: schemas.UserUpdate,
     db: Session = Depends(get_db),
 ):
-    user = is_user_exist(username, db)
+    # username = updated_user.username
+    user = is_user_exist(username=username, db=db)
     update_data = updated_user.model_dump(exclude_unset=True)
 
     try:
@@ -120,7 +128,7 @@ async def delete_user(
     username: str,
     db: Session = Depends(get_db),
 ):
-    user = is_user_exist(username, db)
+    user = is_user_exist(username=username, db=db)
     db.delete(user)
     db.commit()
     return {"message": f"User '{username}' deleted successfully"}
@@ -136,7 +144,7 @@ async def activate_user(
     username: str,
     db: Session = Depends(get_db),
 ):
-    user = is_user_exist(username, db)
+    user = is_user_exist(username, db, active_status=False)
     try:
         user.is_active = True
         db.commit()
@@ -161,6 +169,7 @@ async def deactivate_user(
     username: str,
     db: Session = Depends(get_db),
 ):
+    username = username
     user = is_user_exist(username, db)
 
     try:

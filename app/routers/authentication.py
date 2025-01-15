@@ -3,8 +3,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from starlette.responses import JSONResponse
 
-from ..authorization import oauth2, token
-from ..databases.database import get_db
+from app.authorization import oauth2, token
+from app.databases.database import get_db
 
 router = APIRouter(tags=["authentication"])
 
@@ -17,19 +17,6 @@ async def login_for_access_token(
     user = oauth2.authenticate_user(form_data.username, form_data.password, db)
     if not user:
         return
-    access_token = token.create_access_token(
-        data={"sub": user.username, "role_id": user.role_id}
-    )
+    access_token = token.create_access_token(data={"sub": user.username, "role_id": user.role_id})
     x_token = {"Authorization": f"Bearer {access_token}"}
     return JSONResponse(headers=x_token, content="Authorization")
-    # return {"access_token": access_token, "token_type": "Bearer"}
-
-
-# @router.post("/login")
-# async def user_login(
-#     login: schemas.UserLogin = Depends(), db: Session = Depends(get_db)
-# ):
-#     user = oauth2.authenticate_user(login.username, login.password, db)
-#     if user:
-#         return JSONResponse(token.sign_jwt(login.username))
-#     return {"error": "Wrong login details!"}

@@ -5,7 +5,7 @@ import jwt
 from dotenv import load_dotenv
 from starlette.responses import JSONResponse
 
-from ..models import schemas
+from app.models import schemas
 
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -14,12 +14,13 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
 
 
 def create_access_token(data: dict):
-    to_encode = data.copy()
+    to_encode = data.copy
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    
+
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
 
 def verify_token(token: str):
     try:
@@ -39,10 +40,3 @@ def verify_token(token: str):
             content="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
-
-
-
-
-
-
-
