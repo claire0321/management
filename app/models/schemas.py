@@ -4,6 +4,7 @@ from pydantic import BaseModel, EmailStr, Field, model_validator
 
 from app.authorization import hashing
 from app.error.exceptions import EmptyField, InvalidUsername, InvalidDataType, InsufficientSpace
+from app.error.exceptions import RoleNotFound
 
 
 def validate(values: dict):
@@ -98,3 +99,13 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     username: Optional[str] = None
     role_id: Optional[int] = None
+
+    @classmethod
+    def get_role_name(cls, role_id: int):
+        if role_id == 1:
+            return "admin"
+        elif role_id == 2:
+            return "manager"
+        elif role_id == 3:
+            return "general"
+        raise RoleNotFound

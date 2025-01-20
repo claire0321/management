@@ -1,5 +1,3 @@
-# https://www.youtube.com/watch?v=ZX4I6xginvc
-# https://www.youtube.com/watch?v=-AM5QVkb0OM
 from fastapi import FastAPI
 
 from app.databases import Base
@@ -13,8 +11,23 @@ from app.error.error_handler import (
     invalid_data_type_exception_handler,
     insufficient_space_exception_handler,
     not_unique_username_exception_handler,
+    # invalid_credentials_exception_handler,
+    invalid_token_exception_handler,
+    role_not_found,
 )
-from app.error.exceptions import *
+from app.error.exceptions import (
+    AuthBackendException,
+    UserNotFound,
+    UserAlreadyExists,
+    UserAlreadyInActive,
+    EmptyField,
+    InvalidUsername,
+    InvalidDataType,
+    InsufficientSpace,
+    # InvalidCredentials,
+    InvalidToken,
+    RoleNotFound,
+)
 from app.middleware import auth_middleware
 from app.routers import authentication, users, roles
 
@@ -30,8 +43,15 @@ def init_router():
 
 
 def init_middleware():
+    exception_handlers = {
+        AuthBackendException: auth_error_handler,
+        InvalidToken: invalid_token_exception_handler,
+        # InvalidCredentials: invalid_credentials_exception_handler,
+        RoleNotFound: role_not_found,
+    }
+
     app.add_middleware(auth_middleware.AuthorizationMiddleware)
-    app.add_middleware(auth_middleware.AuthenticationMiddleware, on_error=auth_error_handler)
+    app.add_middleware(auth_middleware.AuthenticationMiddleware, on_error=exception_handlers)
 
 
 def exception_handler():

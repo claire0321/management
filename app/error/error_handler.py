@@ -1,15 +1,22 @@
 from fastapi import Request
 from starlette.responses import JSONResponse
 
-from app.error.exceptions import *
+from app.error.exceptions import (
+    AuthBackendException,
+    UserNotFound,
+    UserAlreadyExists,
+    UserAlreadyInActive,
+    EmptyField,
+    InvalidUsername,
+    InvalidDataType,
+    InsufficientSpace,
+    InvalidToken,
+    RoleNotFound,
+)
 
 
 def auth_error_handler(request: Request, exc: AuthBackendException):
-    return JSONResponse(
-        {"ERROR": "Incorrect username or password"},
-        401,
-        {"WWW-Authenticate": "Bearer"},
-    )
+    return JSONResponse(status_code=exc.statusCode, content={"ERROR": exc.errorCode})
 
 
 async def not_found_exception_handler(request: Request, exc: UserNotFound):
@@ -23,7 +30,7 @@ async def not_unique_username_exception_handler(request: Request, exc: UserAlrea
     )
 
 
-async def user_already_active_exception_handler(request: Request, exc: UserNotFound):
+async def user_already_active_exception_handler(request: Request, exc: UserAlreadyInActive):
     return JSONResponse(status_code=409, content={"ERROR": f"User '{exc.username}' is already in active."})
 
 
@@ -41,7 +48,7 @@ async def invalid_username_not_alphanum_exception_handler(request, exc: InvalidU
     )
 
 
-async def invalid_data_type_exception_handler(request: Request, exc: EmptyField):
+async def invalid_data_type_exception_handler(request: Request, exc: InvalidDataType):
     return JSONResponse(
         status_code=422,
         content={"ERROR": "Validation Error. Please provide a valid data type."},
@@ -53,3 +60,22 @@ async def insufficient_space_exception_handler(request: Request, exc: Insufficie
         status_code=422,
         content={"ERROR": f"Validation Error. Please provide value without any space in {exc.field}."},
     )
+
+
+# async def invalid_credentials_exception_handler(request: Request, exc: InvalidCredentials):
+#     return JSONResponse(
+#         status_code=403,
+#         content={"ERROR": "Could not validate credentials"},
+#         headers={"WWW-Authenticate": "Bearer"},
+#     )
+
+
+async def invalid_token_exception_handler(request, exc: InvalidToken):
+    return JSONResponse(
+        status_code=403,
+        content={"ERROR": "Invalid Token"},
+    )
+
+
+async def role_not_found(request: Request, exc: RoleNotFound):
+    return JSONResponse(status_code=409, content={"ERROR": "Role Not Found"})

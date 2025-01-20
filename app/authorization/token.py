@@ -3,8 +3,8 @@ from datetime import datetime, timedelta, timezone
 
 import jwt
 from dotenv import load_dotenv
-from starlette.responses import JSONResponse
 
+from app.error.exceptions import InvalidToken
 from app.models import schemas
 
 load_dotenv()
@@ -27,16 +27,6 @@ def verify_token(token: str):
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         role_id: int = payload.get("role_id")
-        if username is None:
-            return JSONResponse(
-                status_code=403,
-                content="Could not validate credentials",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
         return schemas.TokenData(username=username, role_id=role_id)
     except jwt.InvalidTokenError:
-        return JSONResponse(
-            status_code=403,
-            content="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise InvalidToken

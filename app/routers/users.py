@@ -92,7 +92,7 @@ async def get_user(
 
 
 @router.put(
-    "/{username}/update",
+    "/update",
     response_model=schemas.UserBase,
     response_model_exclude={"password"},
     status_code=status.HTTP_200_OK,
@@ -112,8 +112,6 @@ async def update_user(
     try:
         for key, value in update_data.items():
             if value:
-                # if key == "password":
-                #     value = hashing.bcrypt(value)
                 setattr(user, key, value)
 
         db.commit()
@@ -128,7 +126,7 @@ async def update_user(
 
 
 @router.delete(
-    "/{username}/delete",
+    "/delete",
     status_code=status.HTTP_200_OK,
     summary="회원 정보 삭제",
     description="username에 해당 하는 회원 정보를 삭제 합니다.",
@@ -144,7 +142,7 @@ async def delete_user(
 
 
 @router.put(
-    "/{username}/activate",
+    "/activate",
     status_code=status.HTTP_200_OK,
     summary="회원 활성화",
     description="username에 해당 하는 회원을 활성화 합니다.",
@@ -169,7 +167,7 @@ async def activate_user(
 
 
 @router.put(
-    "/{username}/deactivate",
+    "/deactivate",
     status_code=status.HTTP_200_OK,
     summary="회원 비활성화",
     description="username에 해당 하는 회원을 비활성화 합니다",
