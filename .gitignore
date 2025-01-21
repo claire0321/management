@@ -2,6 +2,8 @@ README.md
 .vscode
 .venv
 .env
+*.pyc
+*.iml
 
 test/
 

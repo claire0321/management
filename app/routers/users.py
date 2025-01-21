@@ -93,7 +93,7 @@ async def get_user(
 
 
 @router.put(
-    "/update",
+    "/update/",
     response_model=schemas.UserBase,
     response_model_exclude={"password"},
     status_code=status.HTTP_200_OK,

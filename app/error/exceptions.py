@@ -130,8 +130,6 @@ class RoleAlreadyExists(RoleException):
 #     """User has provided wrong email or password during log in."""
 #
 #     pass
-
-
 #
 #
 # class RevokedToken(UserException):
@@ -150,13 +148,6 @@ class RoleAlreadyExists(RoleException):
 #     """User has provided an access token when a refresh token is needed"""
 #
 #     pass
-#
-#
-
-
-#
-#
-
 #
 #
 # class AccountNotVerified(Exception):

@@ -20,10 +20,10 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         try:
             response = await call_next(request)
             if "login" in request.url.path:
-                author = response.headers.get("Authorization")
-                if not author:
+                auth = response.headers.get("Authorization")
+                if not auth:
                     raise AuthBackendException
-                token_type, access_token = author.split(" ")
+                token_type, access_token = auth.split(" ")
                 return JSONResponse(
                     content={"token_type": token_type, "access_token": access_token},
                     headers={"WWW-Authenticate": "Bearer"},
@@ -51,7 +51,7 @@ class AuthorizationMiddleware(BaseHTTPMiddleware):
             auth = request.headers.get("authorization")
             if auth:
                 token_data = token.verify_token(auth)
-                role = token_data.get_role_name(token_data.role_id)
+                role = token_data.get_role_name(token_data.username, token_data.role_id)
                 tags = path_tags(path)
                 if (
                     role in self.role_access
