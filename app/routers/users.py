@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, status, Depends, Query
+from fastapi import APIRouter, status, Depends
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import desc, asc
 from sqlalchemy.orm import Session
@@ -9,7 +9,7 @@ from app.authorization import oauth2
 from app.databases import user_model, database
 from app.error.exceptions import EmptyField, InsufficientSpace, UserAlreadyExists, InsufficientPermission
 from app.models import schemas
-from app.routers import is_user_exist
+from app.routers import is_user_exist, role_available
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -35,6 +35,7 @@ async def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     user_data = user.model_dump(exclude_unset=True)
     user_data["password"] = user.password
     new_user = user_model.User(**user_data)
+    role_available(user.role_id, db)
 
     try:
         db.add(new_user)
@@ -54,8 +55,8 @@ async def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     description="전체 회원의 username 목록을 list 형태로 출력 합니다.",
 )
 async def get_users(
-    order_by: Optional[str] = Query(default=None, enum=["desc", "asc"]),
-    sort_by: Optional[str] = Query(default=None, enum=["username", "role_id"]),
+    order_by: Optional[schemas.Order] = None,
+    sort_by: Optional[schemas.SortBy] = None,
     db: Session = Depends(get_db),
 ):
     query = db.query(user_model.User).filter(user_model.User.is_active == True)
