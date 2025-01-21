@@ -8,10 +8,10 @@ from app.databases.database import get_db
 from app.error.exceptions import AuthBackendException
 from app.models.schemas import Token
 
-router = APIRouter(tags=["Authentication"])
+router = APIRouter(prefix="/login", tags=["Authentication"])
 
 
-@router.post("/login", response_model=Token)
+@router.post("/", response_model=Token)
 async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
