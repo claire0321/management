@@ -8,7 +8,7 @@ from starlette.responses import JSONResponse
 from app.authorization import token
 from app.error.exceptions import AuthBackendException, InvalidToken, RoleNotFound
 
-BASIC_PATH = ["/docs", "/openapi.json", "/favicon.ico"]
+BASIC_PATH = ["/docs", "/openapi.json", "/favicon.ico", "/redoc"]
 
 
 class AuthenticationMiddleware(BaseHTTPMiddleware):
@@ -29,15 +29,11 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                     headers={"WWW-Authenticate": "Bearer"},
                 )
             return response
-        except AuthBackendException as e:
-            handler = self.on_error.get(type(e))
-            if handler:
-                return handler(request, e)
-        except (InvalidToken, RoleNotFound) as e:
+        except (AuthBackendException, InvalidToken, RoleNotFound) as e:
             handler = self.on_error.get(type(e))
             if handler:
                 return await handler(request, e)
-            return JSONResponse(status_code=400, content={"detail": f"Error: {str(e)}"})
+            return JSONResponse(status_code=400, content={"ERROR": f"{str(e)}"})
 
 
 class AuthorizationMiddleware(BaseHTTPMiddleware):

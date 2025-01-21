@@ -17,6 +17,18 @@ class AuthBackendException(Exception):
 
 
 @dataclass
+class LogBackendException(Exception):
+    statusCode: Optional[int] = 422
+    errorCode: Optional[str] = "Invalid request"
+
+    def __init__(self, statusCode=None, errorCode=None):
+        if statusCode:
+            self.statusCode: int = statusCode
+        if errorCode:
+            self.errorCode: str = errorCode
+
+
+@dataclass
 class UserException(Exception):
     """This is the base class for all user errors"""
 
@@ -37,6 +49,18 @@ class UserAlreadyExists(UserException):
 
 class UserAlreadyInActive(UserException):
     """User already in active status"""
+
+    pass
+
+
+class InvalidToken(UserException):
+    """User has provided an invalid or expired token"""
+
+    pass
+
+
+class InsufficientPermission(UserException):
+    """User does not have the necessary permissions to perform an action."""
 
     pass
 
@@ -72,6 +96,26 @@ class InsufficientSpace(FieldException):
     pass
 
 
+@dataclass
+class RoleException(Exception):
+    """This is the base class for all role errors"""
+
+    role_id: Optional[int] = None
+    role_name: Optional[str] = None
+
+
+class RoleNotFound(UserException):
+    """Role Not found"""
+
+    pass
+
+
+class RoleAlreadyExists(RoleException):
+    """Role already exists"""
+
+    pass
+
+
 # =====================================================================
 
 #
@@ -79,12 +123,6 @@ class InsufficientSpace(FieldException):
 #     """User has provided wrong email or password during log in."""
 #
 #     pass
-
-
-class InvalidToken(UserException):
-    """User has provided an invalid or expired token"""
-
-    pass
 
 
 #
@@ -107,24 +145,11 @@ class InvalidToken(UserException):
 #     pass
 #
 #
-# class InsufficientPermission(UserException):
-#     """User does not have the neccessary permissions to perform an action."""
-#
-#     pass
-#
-#
-class RoleNotFound(UserException):
-    """Role Not found"""
-
-    pass
 
 
 #
 #
-# class RoleAlreadyExists(UserException):
-#     """Role already exists"""
-#
-#     pass
+
 #
 #
 # class AccountNotVerified(Exception):

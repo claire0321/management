@@ -1,14 +1,17 @@
-from typing import List, Optional, Annotated
+from typing import List, Optional
 
-from fastapi import APIRouter, status, Depends, HTTPException, Body
+from fastapi import APIRouter, status, Depends, Query
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import desc, asc
 from sqlalchemy.orm import Session
 
 from app.authorization import oauth2
 from app.databases import user_model, database
-from app.error.exceptions import EmptyField, InsufficientSpace, UserAlreadyExists
+from app.error.exceptions import EmptyField, InsufficientSpace, UserAlreadyExists, InsufficientPermission
 from app.models import schemas
 from app.routers import is_user_exist
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 router = APIRouter(
     prefix="/users",
@@ -28,22 +31,7 @@ get_db = database.get_db
     summary="새로운 회원 등록",
     description="새로운 회원의 정보를 추가 합니다.",
 )
-async def create_user(
-    user: Annotated[
-        schemas.UserCreate,
-        Body(
-            examples=[
-                {
-                    "username": "username",
-                    "password": "password",
-                    "email": "user@example.com",
-                    "role_id": 3,
-                }
-            ]
-        ),
-    ],
-    db: Session = Depends(get_db),
-):
+async def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     user_data = user.model_dump(exclude_unset=True)
     user_data["password"] = user.password
     new_user = user_model.User(**user_data)
@@ -65,12 +53,24 @@ async def create_user(
     summary="회원 목록 조회",
     description="전체 회원의 username 목록을 list 형태로 출력 합니다.",
 )
-async def get_users(order_by: Optional[str] = None, db: Session = Depends(get_db)):
+async def get_users(
+    order_by: Optional[str] = Query(default=None, enum=["desc", "asc"]),
+    sort_by: Optional[str] = Query(default=None, enum=["username", "role_id"]),
+    db: Session = Depends(get_db),
+):
     query = db.query(user_model.User).filter(user_model.User.is_active == True)
-    if order_by == "desc":
-        return query.order_by(desc(user_model.User.username)).all()
+
+    if sort_by == "role_id":
+        sort_field = user_model.User.role_id
     else:
-        return query.order_by(asc(user_model.User.username)).all()
+        sort_field = user_model.User.username
+
+    if order_by == "desc":
+        query = query.order_by(desc(sort_field))
+    elif order_by == "asc":
+        query = query.order_by(asc(sort_field))
+
+    return query.all()
 
 
 @router.get(
@@ -119,10 +119,7 @@ async def update_user(
 
         return user
     except:
-        raise HTTPException(
-            status_code=409,
-            detail=f"Invalid values to be updated",
-        )
+        raise InsufficientPermission
 
 
 @router.delete(
@@ -163,7 +160,7 @@ async def activate_user(
             "role_id": user.role_id,
         }
     except:
-        raise HTTPException
+        raise InsufficientPermission
 
 
 @router.put(
@@ -185,4 +182,4 @@ async def deactivate_user(
         db.refresh(user)
         return {"message": f"User '{username}' is deactivated"}
     except:
-        raise HTTPException
+        raise InsufficientPermission

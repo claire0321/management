@@ -12,10 +12,12 @@ from app.error.exceptions import (
     InsufficientSpace,
     InvalidToken,
     RoleNotFound,
+    InsufficientPermission,
+    RoleAlreadyExists,
 )
 
 
-def auth_error_handler(request: Request, exc: AuthBackendException):
+async def auth_error_handler(request: Request, exc: AuthBackendException):
     return JSONResponse(status_code=exc.statusCode, content={"ERROR": exc.errorCode})
 
 
@@ -62,14 +64,6 @@ async def insufficient_space_exception_handler(request: Request, exc: Insufficie
     )
 
 
-# async def invalid_credentials_exception_handler(request: Request, exc: InvalidCredentials):
-#     return JSONResponse(
-#         status_code=403,
-#         content={"ERROR": "Could not validate credentials"},
-#         headers={"WWW-Authenticate": "Bearer"},
-#     )
-
-
 async def invalid_token_exception_handler(request, exc: InvalidToken):
     return JSONResponse(
         status_code=403,
@@ -77,5 +71,13 @@ async def invalid_token_exception_handler(request, exc: InvalidToken):
     )
 
 
-async def role_not_found(request: Request, exc: RoleNotFound):
+async def role_not_found_exception_handler(request: Request, exc: RoleNotFound):
     return JSONResponse(status_code=409, content={"ERROR": "Role Not Found"})
+
+
+async def insufficient_permission_exception_handler(request: Request, exc: InsufficientPermission):
+    return JSONResponse(status_code=409, content={"ERROR": "Invalid values to be updated"})
+
+
+async def role_already_exists_exception_handler(request: Request, exc: RoleAlreadyExists):
+    return JSONResponse(status_code=409, content={"ERROR": f"Role '{exc.role_name}' already exists"})

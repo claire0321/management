@@ -4,17 +4,19 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.authorization import oauth2
 from app.databases import role_model, database
+from app.error.exceptions import RoleAlreadyExists
 from app.models import schemas
 
-router = APIRouter(prefix="/role", tags=["Role"])
+router = APIRouter(prefix="/role", tags=["Role"], dependencies=[Depends(oauth2.get_api_key)])
 
 get_db = database.get_db
 
 
 @router.post("/", status_code=201, summary="New Role created", response_model=schemas.RoleBase)
-def create_role(role: schemas.RoleBase = Depends(), db: Session = Depends(get_db)):
-    role_data = role.model_dump()
+def create_role(role: schemas.RoleBase, db: Session = Depends(get_db)):
+    role_data = role.model_dump(exclude_unset=True)
     new_role = role_model.Role(**role_data)
 
     try:
@@ -23,26 +25,12 @@ def create_role(role: schemas.RoleBase = Depends(), db: Session = Depends(get_db
         db.refresh(new_role)
         return new_role
     except:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Role '{role.role_name}' already exists",
-            response_model=schemas.RoleBase,
-        )
+        raise RoleAlreadyExists(role.name)
 
 
 @router.get("/all_roles", response_model=List[schemas.RoleBase], status_code=status.HTTP_200_OK)
 def get_roles(db: Session = Depends(get_db)):
     return db.query(role_model.Role).all()
-
-
-# @router.get("/{role}", status_code=200, response_model=schemas.RoleBase)
-# def get_role(role: str, db: Session = Depends(get_db)):
-#     role = "".join(role.split()).lower()
-#     role_db = db.query(role_model.Role).filter(role_model.Role.name == role).first()
-#
-#     if not role_db:
-#         raise HTTPException(status_code=409, detail=f"Role {role} not found")
-#     return role_db
 
 
 @router.put("/", status_code=200, response_model=schemas.RoleBase)
