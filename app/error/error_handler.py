@@ -19,7 +19,7 @@ from app.error.exceptions import (
 
 
 async def auth_error_handler(request: Request, exc: AuthBackendException):
-    return JSONResponse(status_code=exc.statusCode, content={"ERROR": exc.errorCode})
+    return JSONResponse(status_code=exc.statusCode, content={"ERROR": exc.errorCode}, headers=exc.headers)
 
 
 async def not_found_exception_handler(request: Request, exc: UserNotFound):

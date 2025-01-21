@@ -8,12 +8,12 @@ class AuthBackendException(Exception):
     unauthorized_value = 401
     statusCode: Optional[int] = unauthorized_value
     errorCode: Optional[str] = "UNAUTHORIZED"
+    headers: Optional[dict] = None
+    # headers: Optional[dict] = field(default_factory=lambda: {"WWW-Authenticate": "Bearer"})
 
-    def __init__(self, statusCode=None, errorCode=None):
-        if statusCode:
-            self.statusCode: int = statusCode
-        if errorCode:
-            self.errorCode: str = errorCode
+    # def __post_init__(self):
+    #     if self.headers is None:
+    #         self.headers = {"WWW-Authenticate": "Bearer"}
 
 
 @dataclass
