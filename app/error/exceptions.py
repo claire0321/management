@@ -96,15 +96,22 @@ class InsufficientSpace(FieldException):
     pass
 
 
+class MissingValue(FieldException):
+    """Missing required field"""
+
+    pass
+
+
 @dataclass
 class RoleException(Exception):
     """This is the base class for all role errors"""
 
     role_id: Optional[int] = None
     role_name: Optional[str] = None
+    token_name: Optional[str] = None
 
 
-class RoleNotFound(UserException):
+class RoleNotFound(RoleException):
     """Role Not found"""
 
     pass

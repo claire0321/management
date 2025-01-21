@@ -13,6 +13,7 @@ from app.error.error_handler import (
     role_not_found_exception_handler,
     insufficient_permission_exception_handler,
     role_already_exists_exception_handler,
+    missing_value_exception_handler,
 )
 from app.error.exceptions import (
     AuthBackendException,
@@ -27,6 +28,7 @@ from app.error.exceptions import (
     InvalidToken,
     RoleNotFound,
     RoleAlreadyExists,
+    MissingValue,
 )
 
 
@@ -40,3 +42,5 @@ def exception_handler(app: FastAPI):
     app.add_exception_handler(UserAlreadyExists, not_unique_username_exception_handler)
     app.add_exception_handler(InsufficientPermission, insufficient_permission_exception_handler)
     app.add_exception_handler(RoleAlreadyExists, role_already_exists_exception_handler)
+    app.add_exception_handler(RoleNotFound, role_not_found_exception_handler)
+    app.add_exception_handler(MissingValue, missing_value_exception_handler)

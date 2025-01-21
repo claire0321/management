@@ -1,9 +1,10 @@
+from enum import Enum
 from typing import Annotated, Optional
 
 from pydantic import BaseModel, EmailStr, Field, model_validator
 
 from app.authorization import hashing
-from app.error.exceptions import EmptyField, InvalidUsername, InvalidDataType, InsufficientSpace
+from app.error.exceptions import EmptyField, InvalidUsername, InvalidDataType, InsufficientSpace, MissingValue
 from app.error.exceptions import RoleNotFound
 
 
@@ -38,45 +39,55 @@ def validate(values: dict):
 
 class UserBase(BaseModel):
     username: str
+    password: Annotated[str, Field(exclude=True)]
     email: Optional[EmailStr] = None
     role_id: int = 3
-    password: Annotated[str, Field(exclude=True)]
     is_active: Annotated[bool, Field(exclude=True)] = True
 
     class Config:
         from_attributes = True
-
-        model_config = {
-            "json_schema_extra": {
-                "example": {
-                    "username": "Bob",
-                    "email": "Bob@example.com",
-                    "password": "password",
-                    "role_id": 1,
-                }
-            }
-        }
 
 
 class UserCreate(UserBase):
     # noinspection PyNestedDecorators
     @model_validator(mode="before")
     @classmethod
-    def field_validations(cls, values):
+    def model_validations(cls, values):
+        username = values.get("username")
+        password = values.get("password")
+
+        if not username:
+            raise MissingValue("username")
+
+        if not password:
+            raise MissingValue("password")
         return validate(values)
 
 
 class UserUpdate(BaseModel):
     username: str
-    email: Optional[EmailStr] = None
     password: Optional[str] = None
+    email: Optional[EmailStr] = None
     role_id: Optional[int] = None
 
     # noinspection PyNestedDecorators
     @model_validator(mode="before")
     @classmethod
-    def field_validations(cls, values):
+    def model_validations(cls, values):
         return validate(values)
+
+
+# ============================================================================
+
+
+class Order(str, Enum):
+    asc = "asc"
+    desc = "desc"
+
+
+class SortBy(str, Enum):
+    username = "username"
+    role_id = "role_id"
 
 
 # ============================================================================
@@ -101,11 +112,11 @@ class TokenData(BaseModel):
     role_id: Optional[int] = None
 
     @classmethod
-    def get_role_name(cls, role_id: int):
+    def get_role_name(cls, username: str, role_id: int):
         if role_id == 1:
             return "admin"
         elif role_id == 2:
             return "manager"
         elif role_id == 3:
             return "general"
-        raise RoleNotFound
+        raise RoleNotFound(token_name=username)

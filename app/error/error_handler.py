@@ -14,6 +14,7 @@ from app.error.exceptions import (
     RoleNotFound,
     InsufficientPermission,
     RoleAlreadyExists,
+    MissingValue,
 )
 
 
@@ -72,7 +73,14 @@ async def invalid_token_exception_handler(request, exc: InvalidToken):
 
 
 async def role_not_found_exception_handler(request: Request, exc: RoleNotFound):
-    return JSONResponse(status_code=409, content={"ERROR": "Role Not Found"})
+    error_message = "Role Not Found"
+
+    if exc.token_name:
+        error_message = f"Role for '{exc.token_name}' not found"
+    elif exc.role_id:
+        error_message = f"Role {exc.role_id} not found"
+
+    return JSONResponse(status_code=409, content={"ERROR": error_message})
 
 
 async def insufficient_permission_exception_handler(request: Request, exc: InsufficientPermission):
@@ -81,3 +89,7 @@ async def insufficient_permission_exception_handler(request: Request, exc: Insuf
 
 async def role_already_exists_exception_handler(request: Request, exc: RoleAlreadyExists):
     return JSONResponse(status_code=409, content={"ERROR": f"Role '{exc.role_name}' already exists"})
+
+
+async def missing_value_exception_handler(request: Request, exc: MissingValue):
+    return JSONResponse(status_code=422, content={"ERROR": f"Field '{exc.field}' is missing or required."})
