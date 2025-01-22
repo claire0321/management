@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 import jwt
 
-from app import jwt_settings
+from app.config import jwt_settings
 from app.error.exceptions import InvalidToken
 from app.models import schemas
 

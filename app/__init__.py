@@ -1,26 +1,35 @@
-import os
-from pathlib import Path
-
-from dotenv import load_dotenv
-
-dir_path = (Path(__file__) / ".." / "..").resolve()
-env_path = os.path.join(dir_path, ".env")
-load_dotenv(dotenv_path=env_path)
+from app.authorization.hashing import bcrypt
+from app.databases import role_model, user_model, database
 
 
-class DbSetting:
-    USER = os.getenv("DB_USER")
-    PASSWORD = os.getenv("DB_PASSWORD")
-    HOST = os.getenv("DB_HOST")
-    PORT = os.getenv("DB_PORT")
-    DATABASE = os.getenv("DB_NAME")
+def initialize_data():
+    db = database.SessionLocal()
+    try:
+        if not db.query(role_model.Role).count():
+            roles = [
+                role_model.Role(name="admin", description="admin role ( create, read, update, delete )"),
+                role_model.Role(name="manager", description="manager role ( create, read, update, delete )"),
+                role_model.Role(name="general", description="general role ( read )"),
+            ]
+            db.add_all(roles)
+            db.commit()
 
-
-class JwtSetting:
-    SECRET_KEY = os.getenv("SECRET_KEY")
-    ALGORITHM = os.getenv("ALGORITHM")
-    ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
-
-
-db_settings = DbSetting()
-jwt_settings = JwtSetting()
+        if not db.query(user_model.User).count():
+            users = [
+                user_model.User(
+                    username="admin", password=bcrypt("admin"), email="admin@example.com", role_id=1
+                ),
+                user_model.User(
+                    username="manager", password=bcrypt("manager"), email="manager@example.com", role_id=2
+                ),
+                user_model.User(
+                    username="general", password=bcrypt("general"), email="general@example.com", role_id=3
+                ),
+            ]
+            db.add_all(users)
+            db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"Error initializing data: {e}")
+    finally:
+        db.close()

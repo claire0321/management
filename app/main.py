@@ -1,12 +1,22 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
+from app import initialize_data
 from app.databases import Base
 from app.databases.database import engine
 from app.error import exception_handler
 from app.middleware import init_middleware
 from app.routers import authentication, users, roles
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    initialize_data()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 Base.metadata.create_all(bind=engine)
 
