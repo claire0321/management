@@ -31,7 +31,7 @@ get_db = database.get_db
     summary="새로운 회원 등록",
     description="새로운 회원의 정보를 추가 합니다.",
 )
-async def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+async def create_user(user: schemas.UserCreateBody, db: Session = Depends(get_db)):
     user_data = user.model_dump(exclude_unset=True)
     user_data["password"] = user.password
     new_user = user_model.User(**user_data)
@@ -55,8 +55,8 @@ async def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     description="전체 회원의 username 목록을 list 형태로 출력 합니다.",
 )
 async def get_users(
-    order_by: Optional[schemas.Order] = None,
-    sort_by: Optional[schemas.SortBy] = None,
+    order_by: Optional[schemas.OrderQuery] = None,
+    sort_by: Optional[schemas.SortByQuery] = None,
     db: Session = Depends(get_db),
 ):
     query = db.query(user_model.User).filter(user_model.User.is_active == True)
@@ -104,7 +104,7 @@ async def get_user(
     description="username에 해당 하는 회원 정보를 수정 합니다. 수정 가능한 항목: password, email",
 )
 async def update_user(
-    updated_user: schemas.UserUpdate,
+    updated_user: schemas.UserUpdateBody,
     db: Session = Depends(get_db),
     current_user: schemas.TokenData = Depends(oauth2.get_api_key),
 ):

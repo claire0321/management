@@ -52,7 +52,7 @@ class UserBase(BaseModel):
         from_attributes = True
 
 
-class UserCreate(UserBase):
+class UserCreateBody(UserBase):
     # noinspection PyNestedDecorators
     @model_validator(mode="before")
     @classmethod
@@ -68,8 +68,7 @@ class UserCreate(UserBase):
         return validate(values)
 
 
-# TODO: 이름
-class UserUpdate(BaseModel):
+class UserUpdateBody(BaseModel):
     username: str
     password: Optional[str] = None
     email: Optional[EmailStr] = None
@@ -85,12 +84,12 @@ class UserUpdate(BaseModel):
 # ============================================================================
 
 
-class Order(str, Enum):
+class OrderQuery(str, Enum):
     asc = "asc"
     desc = "desc"
 
 
-class SortBy(str, Enum):
+class SortByQuery(str, Enum):
     username = "username"
     role_id = "role_id"
 
@@ -107,7 +106,6 @@ class RoleBase(BaseModel):
 
 
 class Token(BaseModel):
-    # Authorization: str = None
     access_token: str
     token_type: str
 
