@@ -16,9 +16,9 @@ def authenticate_user(username: str, password: str, db: Session = Depends(get_db
         db.query(user_model.User).filter(user_model.User.username == username).first()
     )
     if not user:
-        raise AuthBackendException(errorCode="Incorrect username or password", headers={"WWW-Authenticate": "Bearer"})
+        raise AuthBackendException(errorCode="Incorrect username", headers={"WWW-Authenticate": "Bearer"})
     if not hashing.verify(password, user.password):
-        return False
+        raise AuthBackendException(errorCode="Incorrect password", headers={"WWW-Authenticate": "Bearer"})
     return user
 
 def get_api_key(api_key_header: str = Security(api_key_header)):
