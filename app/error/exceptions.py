@@ -9,11 +9,6 @@ class AuthBackendException(Exception):
     statusCode: Optional[int] = unauthorized_value
     errorCode: Optional[str] = "UNAUTHORIZED"
     headers: Optional[dict] = None
-    # headers: Optional[dict] = field(default_factory=lambda: {"WWW-Authenticate": "Bearer"})
-
-    # def __post_init__(self):
-    #     if self.headers is None:
-    #         self.headers = {"WWW-Authenticate": "Bearer"}
 
 
 @dataclass
@@ -33,6 +28,8 @@ class UserException(Exception):
     """This is the base class for all user errors"""
 
     username: Optional[str] = None
+    statusCode: Optional[int] = None
+    errorCode: Optional[str] = None
 
 
 class UserNotFound(UserException):

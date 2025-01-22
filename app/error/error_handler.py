@@ -84,7 +84,13 @@ async def role_not_found_exception_handler(request: Request, exc: RoleNotFound):
 
 
 async def insufficient_permission_exception_handler(request: Request, exc: InsufficientPermission):
-    return JSONResponse(status_code=409, content={"ERROR": "Invalid values to be updated"})
+    error_message = "Invalid values to be updated"
+    status_code = 409
+    if exc.errorCode:
+        error_message = exc.errorCode
+    if exc.statusCode:
+        status_code = 403
+    return JSONResponse(status_code=status_code, content={"ERROR": error_message})
 
 
 async def role_already_exists_exception_handler(request: Request, exc: RoleAlreadyExists):

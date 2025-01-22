@@ -103,7 +103,9 @@ async def get_user(
 async def update_user(
     updated_user: schemas.UserUpdate,
     db: Session = Depends(get_db),
+    current_user: schemas.TokenData = Depends(oauth2.get_api_key),
 ):
+    current_role = current_user.role_id
     username = updated_user.username
     if " " in username:
         raise InsufficientSpace("Username")
@@ -113,14 +115,19 @@ async def update_user(
     try:
         for key, value in update_data.items():
             if value:
+                if key == "role_id" and current_role != 1:
+                    raise InsufficientPermission(statusCode=403, errorCode="Must be admin to update role")
                 setattr(user, key, value)
 
         db.commit()
         db.refresh(user)
 
         return user
-    except:
-        raise InsufficientPermission
+    except InsufficientPermission as e:
+        raise e
+    except Exception as e:
+        db.rollback()
+        raise Exception(f"An error occurred while updating the user: {str(e)}")
 
 
 @router.delete(
