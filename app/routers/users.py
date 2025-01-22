@@ -61,18 +61,7 @@ async def get_users(
 ):
     query = db.query(user_model.User).filter(user_model.User.is_active == True)
 
-    # TODO: 함수화
-    if sort_by == "role_id":
-        sort_field = user_model.User.role_id
-    else:
-        sort_field = user_model.User.username
-
-    if order_by == "desc":
-        query = query.order_by(desc(sort_field))
-    elif order_by == "asc":
-        query = query.order_by(asc(sort_field))
-
-    return query.all()
+    return sorting_user(sort_by, order_by, query)
 
 
 @router.get(
@@ -196,3 +185,17 @@ async def deactivate_user(
         return {"message": f"User '{username}' is deactivated"}
     except:
         raise UserException(errorCode="Invalid values to be updated")
+
+
+def sorting_user(sort_by: Optional[schemas.SortByQuery], order_by: Optional[schemas.OrderQuery], query):
+    if sort_by == "role_id":
+        sort_field = user_model.User.role_id
+    else:
+        sort_field = user_model.User.username
+
+    if order_by == "desc":
+        query = query.order_by(desc(sort_field))
+    elif order_by == "asc":
+        query = query.order_by(asc(sort_field))
+
+    return query.all()
