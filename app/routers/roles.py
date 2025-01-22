@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.authorization import oauth2
 from app.databases import role_model, database
-from app.error.exceptions import RoleAlreadyExists
+from app.error import RoleException
 from app.models import schemas
 
 router = APIRouter(prefix="/role", tags=["Role"], dependencies=[Depends(oauth2.get_api_key)])
@@ -25,7 +25,7 @@ def create_role(role: schemas.RoleBase, db: Session = Depends(get_db)):
         db.refresh(new_role)
         return new_role
     except:
-        raise RoleAlreadyExists(role.name)
+        raise RoleException(errorCode=f"Role '{role.name}' already exists")
 
 
 @router.get("/all_roles", response_model=List[schemas.RoleBase], status_code=status.HTTP_200_OK)

@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
 from app.databases import user_model, role_model
-from app.error.exceptions import UserNotFound, UserAlreadyInActive, RoleNotFound
+from app.error.exceptions import UserException, RoleException
 
 
 def is_user_exist(username: str, db: Session, active_status: bool = True):
@@ -15,8 +15,8 @@ def is_user_exist(username: str, db: Session, active_status: bool = True):
     )
     if not user:
         if not active_status:
-            raise UserAlreadyInActive(username)
-        raise UserNotFound(username)
+            raise UserException(errorCode=f"User '{username}' is already in active.")
+        raise UserException(errorCode=f"User '{username}' not Found")
 
     return user
 
@@ -24,4 +24,4 @@ def is_user_exist(username: str, db: Session, active_status: bool = True):
 def role_available(role_id: int, db: Session):
     role = db.query(role_model.Role).filter(role_model.Role.id == role_id).first()
     if not role:
-        raise RoleNotFound(role_id=role_id)
+        raise RoleException(statusCode=409, errorCode=f"Role {role_id} not found")

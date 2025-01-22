@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.authorization import oauth2
 from app.databases import user_model, database
-from app.error.exceptions import EmptyField, InsufficientSpace, UserAlreadyExists, InsufficientPermission
+from app.error import UserException
 from app.models import schemas
 from app.routers import is_user_exist, role_available
 
@@ -44,7 +44,7 @@ async def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
         return user
     except:
-        raise UserAlreadyExists(user.username)
+        raise UserException(errorCode=f"Username '{user.username}' already exists")
 
 
 @router.get(
@@ -61,6 +61,7 @@ async def get_users(
 ):
     query = db.query(user_model.User).filter(user_model.User.is_active == True)
 
+    # TODO: 함수화
     if sort_by == "role_id":
         sort_field = user_model.User.role_id
     else:
@@ -86,9 +87,11 @@ async def get_user(
     db: Session = Depends(get_db),
 ):
     if not "".join(username.split()):
-        raise EmptyField("Username")
+        raise FieldException(errorCode="Username cannot be empty")
     if " " in username:
-        raise InsufficientSpace("Username")
+        raise FieldException(
+            errorCode="Validation Error. Please provide value without any space in Username."
+        )
     return is_user_exist(username=username, db=db)
 
 
@@ -108,7 +111,9 @@ async def update_user(
     current_role = current_user.role_id
     username = updated_user.username
     if " " in username:
-        raise InsufficientSpace("Username")
+        raise FieldException(
+            errorCode="Validation Error. Please provide value without any space in Username."
+        )
     user = is_user_exist(username=username, db=db)
     update_data = updated_user.model_dump(exclude_unset=True)
 
@@ -116,14 +121,14 @@ async def update_user(
         for key, value in update_data.items():
             if value:
                 if key == "role_id" and current_role != 1:
-                    raise InsufficientPermission(statusCode=403, errorCode="Must be admin to update role")
+                    raise UserException(statusCode=403, errorCode="Must be admin to update role")
                 setattr(user, key, value)
 
         db.commit()
         db.refresh(user)
 
         return user
-    except InsufficientPermission as e:
+    except UserException as e:
         raise e
     except Exception as e:
         db.rollback()
@@ -168,7 +173,7 @@ async def activate_user(
             "role_id": user.role_id,
         }
     except:
-        raise InsufficientPermission
+        raise UserException(errorCode="Invalid values to be updated")
 
 
 @router.put(
@@ -190,4 +195,4 @@ async def deactivate_user(
         db.refresh(user)
         return {"message": f"User '{username}' is deactivated"}
     except:
-        raise InsufficientPermission
+        raise UserException(errorCode="Invalid values to be updated")

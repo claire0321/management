@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 import jwt
 
 from app.config import jwt_settings
-from app.error.exceptions import InvalidToken
+from app.error.exceptions import AuthBackendException
 from app.models import schemas
 
 
@@ -23,4 +23,4 @@ def verify_token(token: str):
         role_id: int = payload.get("role_id")
         return schemas.TokenData(username=username, role_id=role_id)
     except jwt.InvalidTokenError:
-        raise InvalidToken
+        raise AuthBackendException(statusCode=403, errorCode="Invalid Token")

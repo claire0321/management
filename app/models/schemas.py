@@ -4,8 +4,10 @@ from typing import Annotated, Optional
 from pydantic import BaseModel, EmailStr, Field, model_validator
 
 from app.authorization import hashing
-from app.error.exceptions import EmptyField, InvalidUsername, InvalidDataType, InsufficientSpace, MissingValue
-from app.error.exceptions import RoleNotFound
+from app.error import RoleException
+from app.error.exceptions import (
+    FieldException,
+)
 
 
 def validate(values: dict):
@@ -16,20 +18,22 @@ def validate(values: dict):
             if (field == "role_id" and not isinstance(value, int)) or (
                 field == "is_active" and not isinstance(value, bool)
             ):
-                raise InvalidDataType
+                raise FieldException(errorCode="Validation Error. Please provide a valid data type.")
             continue
 
         # Check if the value is empty or consists of only whitespace
         if value and not "".join(value.split()):
-            raise EmptyField(field)
+            raise FieldException(errorCode=f"{field} cannot be empty")
 
         # Check if the value contains any space
         if " " in value:
-            raise InsufficientSpace(field)
+            raise FieldException(
+                errorCode=f"Validation Error. Please provide value without any space in {field}."
+            )
 
         # Check if username is alphanum
         if field == "username" and not value.isalnum():
-            raise InvalidUsername
+            raise FieldException(errorCode="Username should be alphanum.")
 
         # Hash password
         if field == "password" and value:
@@ -57,13 +61,14 @@ class UserCreate(UserBase):
         password = values.get("password")
 
         if not username:
-            raise MissingValue("username")
+            raise FieldException(errorCode=f"Field 'username' is missing or required.")
 
         if not password:
-            raise MissingValue("password")
+            raise FieldException(errorCode=f"Field 'password' is missing or required.")
         return validate(values)
 
 
+# TODO: 이름
 class UserUpdate(BaseModel):
     username: str
     password: Optional[str] = None
@@ -119,4 +124,4 @@ class TokenData(BaseModel):
             return "manager"
         elif role_id == 3:
             return "general"
-        raise RoleNotFound(token_name=username)
+        raise RoleException(errorCode=f"Role for '{username}' not found")
