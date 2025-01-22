@@ -5,6 +5,7 @@ README.md
 *.pyc
 *.iml
 
+**/__pycache__/
 test/
 
 # poetry.lock
