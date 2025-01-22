@@ -4,6 +4,7 @@ README.md
 .env
 *.pyc
 *.iml
+*.db
 
 **/__pycache__/
 test/
