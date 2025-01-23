@@ -1,11 +1,34 @@
+from functools import lru_cache
+
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-from app.config import db_settings
+from app.config import DatabaseSetting
 
-DB_URL = f"mysql+pymysql://{db_settings.USER}:{db_settings.PASSWORD}@{db_settings.HOST}:{db_settings.PORT}/{db_settings.DATABASE}"
-# DB_URL = db_settings.SQLALCHAMY_DATABASE_URL
+
+@lru_cache()
+def setting():
+    return DatabaseSetting()
+
+
+def database_mysql_url_config():
+    return str(
+        setting().DB_CONNECTION
+        + "://"
+        + setting().DB_USERNAME
+        + ":"
+        + setting().DB_PASSWORD
+        + "@"
+        + setting().DB_HOST
+        + ":"
+        + setting().DB_PORT
+        + "/"
+        + setting().DB_DATABASE
+    )
+
+
+DB_URL = database_mysql_url_config()
 
 engine = create_engine(DB_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
