@@ -2,6 +2,7 @@
 services:
   api:
     build: .
+    image: ikim318/management:1.5
     container_name: fastapi-management
     ports:
       - 8000:8000
@@ -11,6 +12,5 @@ services:
       - .env
   db:
     image: mysql
-    #    restart: always
     environment:
       MYSQL_ROOT_PASSWORD: password
