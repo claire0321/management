@@ -49,16 +49,3 @@ def update_role(role: str, update_role: schemas.RoleBase, db: Session = Depends(
     db.refresh(role_db)
 
     return role_db
-
-
-# @router.delete("/", status_code=200)
-# def delete_role(role: str, databases: Session = Depends(get_db)):
-#     role = "".join(role.split).lower()
-#     role_db = databases.query(models.Role).filter(models.Role.name == role).first()
-#
-#     if not role_db:
-#         raise HTTPException(status_code=409, detail=f"Role {role} not found")
-#
-#     databases.delete(role)
-#     databases.commit()
-#     return {"message": f"Role '{role}' deleted successfully"}
