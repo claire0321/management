@@ -13,4 +13,6 @@ RUN poetry check
 
 COPY ./app ./app
 
-CMD [ "uvicorn", "app.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000" ]
+RUN pip install uvicorn
+
+CMD [ "poetry", "run", "uvicorn", "app.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000" ]
