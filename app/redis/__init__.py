@@ -1,7 +1,12 @@
+import json
 import os
 
 import redis
 from dotenv import load_dotenv
+
+from app.databases import role_model
+from app.databases.database import db_dependency
+from app.redis.redis_body import RoleRedis, UserRedis
 
 load_dotenv()
 
@@ -16,6 +21,19 @@ def redis_connect():
         return rd
     except redis.exceptions:
         print("Redis connection failure")
+
+
+def redis_init(db: db_dependency):
+    roles = db.query(role_model.Role).all()
+    roles_data = []
+    for role in roles:
+        role_data = RoleRedis(role).serialize()
+
+
+def redis_set(type_: str, id_, data: dict, ex=180):
+    key = f"{type_.upper()}:{id_}"
+    value = json.dumps(data, ensure_ascii=False, default=str)
+    redis_cache.set(key, value, ex)
 
 
 redis_cache = redis_connect()

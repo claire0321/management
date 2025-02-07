@@ -35,7 +35,6 @@ def get_roles(db: Session = Depends(get_db)):
 
 @router.put("/", status_code=200, response_model=schemas.RoleBase)
 def update_role(role: str, update_role: schemas.RoleBase, db: Session = Depends(get_db)):
-    role = "".join(role.split).lower()
     role_db = db.query(role_model.Role).filter(role_model.Role.name == role).first()
 
     if not role_db:

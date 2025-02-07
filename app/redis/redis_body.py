@@ -3,8 +3,9 @@ from app.error.exceptions import RoleException
 
 
 class UserRedis:
-    def __init__(self, user: user_model.User):
+    def __init__(self, user: user_model.User, role: role_model.Role):
         self.user = user
+        self.role = role
 
     def serialize(self):
         return {
@@ -12,10 +13,11 @@ class UserRedis:
             "username": self.user.username,
             "password": self.user.password,
             "email": self.user.email,
-            "created_at": str(self.user.created_at),
-            "updated_at": str(self.user.updated_at),
+            "created_at": self.user.created_at,
+            "updated_at": self.user.updated_at,
             "is_active": self.user.is_active,
             "role_id": self.user.role_id,
+            "role": RoleRedis(self.role).serialize(),
         }
 
     def get_role_name(self):
@@ -38,6 +40,19 @@ class RoleRedis:
             "id": self.role.id,
             "name": self.role.name,
             "description": self.role.description,
-            "created_at": str(self.user.created_at),
-            "updated_at": str(self.user.updated_at),
+            "created_at": self.role.created_at,
+            "updated_at": self.role.updated_at,
+            "user": [
+                {
+                    "id": user.id,
+                    "username": user.username,
+                    "password": user.password,
+                    "email": user.email,
+                    "created_at": user.created_at,
+                    "updated_at": user.updated_at,
+                    "is_active": user.is_active,
+                    "role_id": user.role_id,
+                }
+                for user in self.role.users
+            ],
         }
