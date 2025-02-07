@@ -142,6 +142,9 @@ async def delete_user(
     user = is_user_exist(username=username, db=db)
     db.delete(user)
     db.commit()
+    cache_user = redis_cache.get(f"Users:{username}")
+    if cache_user:
+        redis_cache.delete(f"Users:{username}")
     return {"message": f"User '{username}' deleted successfully"}
 
 
