@@ -14,4 +14,4 @@ class User(BaseModel):
     is_active = Column(Boolean, nullable=False, default=True)
 
     role_id = Column(Integer, ForeignKey("roles.id"), default=3)
-    role = relationship("Role", backref="users", uselist=False)
+    role = relationship("Role", back_populates="users")
