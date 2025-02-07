@@ -6,6 +6,7 @@ from app import initialize_data
 from app.databases.database import engine, Base
 from app.error import exception_handler
 from app.middleware import init_middleware
+from app.redis import redis_cache
 from app.routers import authentication, users, roles
 
 
@@ -18,6 +19,20 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 Base.metadata.create_all(bind=engine)
+
+
+@app.on_event("shutdown")
+def shutdown_event():
+    redis_cache.flushdb()
+
+
+#
+#
+# @app.get("/test2")
+# async def test2():
+#     rd = await redis_test2()
+#
+#     return {"res": rd}
 
 
 def init_router():

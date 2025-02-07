@@ -2,14 +2,13 @@ from typing import List, Optional
 
 from fastapi import APIRouter, status, Depends
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy import desc, asc
 from sqlalchemy.orm import Session
 
 from app.authorization import oauth2
 from app.databases import user_model, database
 from app.error import UserException
 from app.models import schemas
-from app.routers import is_user_exist, role_available
+from app.routers import is_user_exist, role_available, sorting_user
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -64,6 +63,15 @@ async def get_users(
     return sorting_user(sort_by, order_by, query)
 
 
+from app.redis import redis_cache
+
+
+@router.get("/redis/test")
+async def test():
+    rd = redis_cache
+    return {rd}
+
+
 @router.get(
     "/{username}",
     response_model=schemas.UserBase,
@@ -71,10 +79,7 @@ async def get_users(
     summary="특정 회원 정보 조회",
     description="username에 해당 하는 회원 정보를 조회 합니다.",
 )
-async def get_user(
-    username: str,
-    db: Session = Depends(get_db),
-):
+async def get_user(username: str, db: Session = Depends(get_db)):
     if not "".join(username.split()):
         raise FieldException(errorCode="Username cannot be empty")
     if " " in username:
@@ -185,17 +190,3 @@ async def deactivate_user(
         return {"message": f"User '{username}' is deactivated"}
     except:
         raise UserException(errorCode="Invalid values to be updated")
-
-
-def sorting_user(sort_by: Optional[schemas.SortByQuery], order_by: Optional[schemas.OrderQuery], query):
-    if sort_by == "role_id":
-        sort_field = user_model.User.role_id
-    else:
-        sort_field = user_model.User.username
-
-    if order_by == "desc":
-        query = query.order_by(desc(sort_field))
-    elif order_by == "asc":
-        query = query.order_by(asc(sort_field))
-
-    return query.all()
