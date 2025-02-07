@@ -32,11 +32,12 @@ def prev_is_user_exist(username: str, db: Session, active_status: bool = True):
 
 
 def is_user_exist(username: str, db: Session, active_status: bool = True):
-    cache_key = f"Users:{username}"
+    user = None
+    cache_key = f"USER:{username}"
     cache_user = redis_cache.get(cache_key)
     if cache_user:
-        user_data = json.loads(cache_user.decode("utf-8"))
-        return datetime_parser(user_data)
+        user_data = json.loads(cache_user)
+        return datetime_parser(user_data), user
 
     # Search From db
     user = (
@@ -59,13 +60,11 @@ def is_user_exist(username: str, db: Session, active_status: bool = True):
     # Caching to redis
     user_data = {k: v for k, v in user.__dict__.items() if not k.startswith("_")}
     redis_set("user", username, user_data)
-    return user_data
+    return user_data, user
 
 
 def datetime_parser(data: dict):
     for key, value in data.items():
-        if key == "role":
-            data["role"] = datetime_parser(value)
         if isinstance(value, str):
             try:
                 data[key] = datetime.fromisoformat(value)
@@ -79,8 +78,10 @@ def role_available(role_id: int, db: Session):
     if not role:
         raise RoleException(statusCode=409, errorCode=f"Role {role_id} not found")
 
-
-def sorting_user(sort_by: Optional[schemas.SortByQuery], order_by: Optional[schemas.OrderQuery], query):
+# TODO: query 에서 list 로 바꿈, have to work on sorting again.
+def sorting_user(
+    sort_by: Optional[schemas.SortByQuery], order_by: Optional[schemas.OrderQuery], query: list[dict]
+):
     if sort_by == "role_id":
         sort_field = user_model.User.role_id
     else:

@@ -7,8 +7,8 @@ from app.authorization import oauth2
 from app.databases import user_model, database
 from app.error import UserException
 from app.models import schemas
-from app.redis import redis_cache, redis_set
-from app.routers import is_user_exist, role_available, sorting_user, prev_is_user_exist
+from app.redis import redis_cache, redis_set, redis_refresh
+from app.routers import is_user_exist, role_available, sorting_user
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -41,11 +41,14 @@ async def create_user(user: schemas.UserCreateBody, db: db_dependency):
         db.commit()
         db.refresh(new_user)
 
+        redis_set(id_=user.username, data=user_data)
+
         return user
     except:
         raise UserException(errorCode=f"Username '{user.username}' already exists")
 
 
+# TODO: work it out, get_users
 @router.get(
     "/",
     response_model=List[schemas.UserBase],
@@ -58,9 +61,10 @@ async def get_users(
     order_by: Optional[schemas.OrderQuery] = None,
     sort_by: Optional[schemas.SortByQuery] = None,
 ):
+    users, _ = redis_refresh(db)
     query = db.query(user_model.User).filter(user_model.User.is_active == True)
 
-    return sorting_user(sort_by, order_by, query)
+    return sorting_user(sort_by, order_by, users)
 
 
 @router.get("/redis/test")
@@ -82,7 +86,9 @@ async def get_user(username: str, db: db_dependency):
         raise FieldException(
             errorCode="Validation Error. Please provide value without any space in Username."
         )
-    return is_user_exist(username=username, db=db)
+    user_data, _ = is_user_exist(username=username, db=db)
+    print(redis_cache.info(section="memory"))
+    return user_data
 
 
 @router.put(
@@ -105,14 +111,17 @@ async def update_user(
             errorCode="Validation Error. Please provide value without any space in Username."
         )
 
-    user = is_user_exist(username=username, db=db)  # user_model.User
+    user_data, user = is_user_exist(username=username, db=db)  # user_model.User
     update_data = updated_user.model_dump(exclude_unset=True)  # dict
 
     try:
+        if not user:
+            user = db.query(user_model.User).filter(user_model.User.username == username).first()
         for key, value in update_data.items():
             if value:
                 if key == "role_id" and current_role != 1:
                     raise UserException(statusCode=403, errorCode="Must be admin to update role")
+                user_data[key] = value
                 setattr(user, key, value)
 
         db.commit()
@@ -136,13 +145,21 @@ async def delete_user(
     username: str,
     db: db_dependency,
 ):
-    user = is_user_exist(username=username, db=db)
-    db.delete(user)
-    db.commit()
-    cache_user = redis_cache.get(f"Users:{username}")
-    if cache_user:
-        redis_cache.delete(f"Users:{username}")
-    return {"message": f"User '{username}' deleted successfully"}
+    user_data, user = is_user_exist(username=username, db=db)
+    try:
+        if user:
+            db.delete(user)
+            db.commit()
+        else:
+            db.query(user_model.User).filter(user_model.User.username == username).delete()
+            db.commit()
+
+        cache_user = redis_cache.get(f"USER:{username}")
+        if cache_user:
+            redis_cache.delete(f"USER:{username}")
+        return {"message": f"User '{username}' deleted successfully"}
+    except:
+        raise UserException(errorCode=f"Unable to delete {username}")
 
 
 @router.put(
@@ -156,43 +173,23 @@ async def activate_user(
     username: str,
     db: db_dependency,
 ):
-    user_data: dict = is_user_exist(username, db, active_status=False)
+    user_data, user = is_user_exist(username, db, active_status=False)
     try:
         user_data["is_active"] = True
+        if user:
+            user.is_active = True
+            db.commit()
+            db.refresh(user)
+        else:
+            db.query(user_model.User).filter_by(username=username).update({"is_active": True})
+            db.commit()
 
-        db.query(user_model.User).filter_by(username=username).update({"is_active": True})
-        db.commit()
+        redis_set(id_=username, data=user_data)
 
-        redis_set("Users", username, user_data)
-
-        return {"message": f"User '{username}' is activated", **user_data}
-    except:
+        return {"message": f"User '{username}' is activated"}
+        # return {"message": f"User '{username}' is deactivated"}
+    except UserException:
         raise UserException(errorCode="Invalid values to be updated")
-
-
-# @router.put(
-#     "/activate",
-#     status_code=status.HTTP_200_OK,
-#     summary="회원 활성화",
-#     description="username에 해당 하는 회원을 활성화 합니다.",
-# )
-# async def activate_user(
-#     username: str,
-#     db: db_dependency,
-# ):
-#     user = is_user_exist(username, db, active_status=False)
-#     try:
-#         user.is_active = True
-#         db.commit()
-#         db.refresh(user)
-#         return {
-#             "message": f"User '{username}' is activated",
-#             "username": username,
-#             "email": user.email,
-#             "role_id": user.role_id,
-#         }
-#     except:
-#         raise UserException(errorCode="Invalid values to be updated")
 
 
 @router.put(
@@ -205,13 +202,20 @@ async def deactivate_user(
     username: str,
     db: db_dependency,
 ):
-    username = username
-    user = prev_is_user_exist(username, db)
+    user_data, user = is_user_exist(username, db)
 
     try:
-        user.is_active = False
-        db.commit()
-        db.refresh(user)
+        user_data["is_active"] = False
+        if user:
+            user.is_active = False
+            db.commit()
+            db.refresh(user)
+        else:
+            db.query(user_model.User).filter_by(username=username).update({"is_active": False})
+            db.commit()
+
+        redis_set(id_=username, data=user_data)
+
         return {"message": f"User '{username}' is deactivated"}
     except:
         raise UserException(errorCode="Invalid values to be updated")
