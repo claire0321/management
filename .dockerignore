@@ -2,12 +2,9 @@
 .gitignore
 .dockerignore
 Dockerfile
-*.md
 *.sh
 *.yml
-scripts
 
-README.md
 .vscode
 .venv
 .env
