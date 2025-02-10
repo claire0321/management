@@ -78,7 +78,7 @@ def role_available(role_id: int, db: Session):
     if not role:
         raise RoleException(statusCode=409, errorCode=f"Role {role_id} not found")
 
-# TODO: query 에서 list 로 바꿈, have to work on sorting again.
+
 def sorting_user(
     sort_by: Optional[schemas.SortByQuery], order_by: Optional[schemas.OrderQuery], query: list[dict]
 ):

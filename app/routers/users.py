@@ -7,7 +7,7 @@ from app.authorization import oauth2
 from app.databases import user_model, database
 from app.error import UserException
 from app.models import schemas
-from app.redis import redis_cache, redis_set, redis_refresh
+from app.redis import redis_cache, redis_set
 from app.routers import is_user_exist, role_available, sorting_user
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -48,7 +48,6 @@ async def create_user(user: schemas.UserCreateBody, db: db_dependency):
         raise UserException(errorCode=f"Username '{user.username}' already exists")
 
 
-# TODO: work it out, get_users
 @router.get(
     "/",
     response_model=List[schemas.UserBase],
@@ -61,10 +60,17 @@ async def get_users(
     order_by: Optional[schemas.OrderQuery] = None,
     sort_by: Optional[schemas.SortByQuery] = None,
 ):
-    users, _ = redis_refresh(db)
     query = db.query(user_model.User).filter(user_model.User.is_active == True)
+    users = sorting_user(sort_by, order_by, query)
 
-    return sorting_user(sort_by, order_by, users)
+    # Caching into redis
+    for user in users:
+        cache_key = f"USER:{user.username}"
+        cache_data = redis_cache.get(cache_key)
+        if not cache_data:
+            user_data = {k: v for k, v in user.__dict__.items() if not k.startswith("_")}
+            redis_set(id_=user.username, data=user_data)
+    return users
 
 
 @router.get("/redis/test")
