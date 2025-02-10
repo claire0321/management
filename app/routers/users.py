@@ -93,7 +93,6 @@ async def get_user(username: str, db: db_dependency):
             errorCode="Validation Error. Please provide value without any space in Username."
         )
     user_data, _ = is_user_exist(username=username, db=db)
-    print(redis_cache.info(section="memory"))
     return user_data
 
 
