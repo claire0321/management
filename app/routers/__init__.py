@@ -5,9 +5,9 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.databases import user_model, role_model
+from app.databases.redis_base import redis_cache, redis_set
 from app.error.exceptions import UserException, RoleException
 from app.models import schemas
-from app.redis import redis_cache, redis_set
 
 
 # import json

@@ -6,9 +6,9 @@ from sqlalchemy.orm import Session
 
 from app.authorization import oauth2
 from app.databases import role_model, database
+from app.databases.redis_base import redis_cache, redis_set
 from app.error import RoleException, UserException
 from app.models import schemas
-from app.redis import redis_cache, redis_set
 
 router = APIRouter(prefix="/role", tags=["Role"], dependencies=[Depends(oauth2.get_api_key)])
 

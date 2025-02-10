@@ -1,10 +1,7 @@
 import json
 import os
 
-import redis
 from dotenv import load_dotenv
-
-from app.redis.redis_body import RoleRedis, UserRedis
 
 load_dotenv()
 

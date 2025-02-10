@@ -5,9 +5,9 @@ from fastapi.security import OAuth2PasswordBearer
 
 from app.authorization import oauth2
 from app.databases import user_model, database
+from app.databases.redis_base import redis_cache, redis_set
 from app.error import UserException
 from app.models import schemas
-from app.redis import redis_cache, redis_set
 from app.routers import is_user_exist, role_available, sorting_user
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
