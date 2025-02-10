@@ -8,6 +8,7 @@ README.md
 
 __pycache__/
 test/
+data/
 
 # poetry.lock
 # pyproject.toml
