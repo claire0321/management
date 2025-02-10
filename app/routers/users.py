@@ -132,12 +132,11 @@ async def update_user(
         db.commit()
         db.refresh(user)
 
+        redis_set(id_=user.username, data=user_data)
+
         return user
     except UserException as e:
         raise e
-    except Exception as e:
-        db.rollback()
-        raise Exception(f"An error occurred while updating the user: {str(e)}")
 
 
 @router.delete(

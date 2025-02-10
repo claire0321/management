@@ -21,7 +21,7 @@ def redis_connect():
         print("Redis connection failure")
 
 
-def redis_set(type_: str = "user", id_: str = None, data: dict = None, ex=10):
+def redis_set(type_: str = "user", id_: str = None, data: dict = None, ex=1800):
     try:
         key = f"{type_.upper()}:{id_}"
         value = json.dumps(data, ensure_ascii=False, default=str)
