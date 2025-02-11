@@ -4,7 +4,7 @@ from typing import Annotated, Optional
 from pydantic import BaseModel, EmailStr, Field, model_validator
 
 from app.authorization import hashing
-from app.error import RoleException
+from app.error import VariableException
 from app.error.exceptions import (
     FieldException,
 )
@@ -16,7 +16,7 @@ def validate(values: dict):
         # Skip excluded fields
         if field in excluded_fields:
             if (field == "role_id" and not isinstance(value, int)) or (
-                field == "is_active" and not isinstance(value, bool)
+                    field == "is_active" and not isinstance(value, bool)
             ):
                 raise FieldException(errorCode="Validation Error. Please provide a valid data type.")
             continue
@@ -122,4 +122,4 @@ class TokenData(BaseModel):
             return "manager"
         elif role_id == 3:
             return "general"
-        raise RoleException(errorCode=f"Role for '{username}' not found")
+        raise VariableException(errorCode=f"Role for '{username}' not found")

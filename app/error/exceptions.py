@@ -11,14 +11,6 @@ class AuthBackendException(Exception):
 
 
 @dataclass
-class UserException(Exception):
-    """This is the base class for all user errors"""
-
-    statusCode: Optional[int] = 409
-    errorCode: Optional[str] = None
-
-
-@dataclass
 class FieldException(Exception):
     """This is the base class for all field errors"""
 
@@ -27,8 +19,13 @@ class FieldException(Exception):
 
 
 @dataclass
-class RoleException(Exception):
-    """This is the base class for all role errors"""
+class VariableException(Exception):
+    """This is the base class for all user and role errors"""
 
     statusCode: Optional[int] = 409
     errorCode: Optional[str] = None
+
+# @dataclass
+# class UnhandledException(Exception):
+#     statusCode: Optional[int] = 404
+#     errorCode: Optional[str] = None

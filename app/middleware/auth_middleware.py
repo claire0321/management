@@ -6,8 +6,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from app.authorization import token
-from app.error import RoleException
-from app.error.exceptions import AuthBackendException
+from app.error.exceptions import AuthBackendException, VariableException
 
 BASIC_PATH = ["/docs", "/openapi.json", "/favicon.ico", "/redoc"]
 
@@ -30,7 +29,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                     headers={"WWW-Authenticate": "Bearer"},
                 )
             return response
-        except (AuthBackendException, RoleException) as e:
+        except (AuthBackendException, VariableException) as e:
             handler = self.on_error.get(type(e))
             if handler:
                 return await handler(request, e)
@@ -41,9 +40,10 @@ class AuthorizationMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: FastAPI):
         super().__init__(app)
         self.role_access = {
-            "admin": {"users": ["POST", "GET", "PUT", "DELETE"], "role": ["POST", "PUT", "GET"]},
-            "manager": {"users": ["POST", "GET", "PUT", "DELETE"]},
-            "general": {"users": ["GET"]},
+            "admin": {"users": ["POST", "GET", "PUT", "DELETE"], "role": ["POST", "PUT", "GET"],
+                      "redis": ["POST", "GET", "PUT", "DELETE"]},
+            "manager": {"users": ["POST", "GET", "PUT", "DELETE"], "redis": ["POST", "GET", "PUT", "DELETE"]},
+            "general": {"users": ["GET"], "redis": ["POST", "GET", "PUT", "DELETE"]},
         }
 
     async def dispatch(self, request: Request, call_next):
@@ -55,9 +55,9 @@ class AuthorizationMiddleware(BaseHTTPMiddleware):
                 role = token_data.get_role_name(token_data.username, token_data.role_id)
                 tags = path_tags(path)
                 if (
-                    role in self.role_access
-                    and tags in self.role_access[role]
-                    and request.method in self.role_access[role][tags]
+                        role in self.role_access
+                        and tags in self.role_access[role]
+                        and request.method in self.role_access[role][tags]
                 ):
                     pass
                 else:
