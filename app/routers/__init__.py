@@ -6,38 +6,27 @@ from sqlalchemy.orm import Session
 
 from app.databases import user_model, role_model
 from app.databases.redis_base import redis_cache, redis_set
-from app.error.exceptions import UserException, RoleException
+from app.error.exceptions import VariableException
 from app.models import schemas
 
 
-# import json
-# from app.redis import redis_cache, redis_body
+# TODO: CRUD user 랑 role 둘다 쓸 수 있게 만들어 보기.
+async def is_user_exist(username: str, db: Session, active_status: bool = True):
+    async def datetime_parser(data: dict):
+        for key, value in data.items():
+            if isinstance(value, str):
+                try:
+                    data[key] = datetime.fromisoformat(value)
+                except ValueError:
+                    pass
+        return data
 
-
-def prev_is_user_exist(username: str, db: Session, active_status: bool = True):
-    user = (
-        db.query(user_model.User)
-        .filter(
-            user_model.User.username == username,
-            user_model.User.is_active == active_status,
-        )
-        .first()
-    )
-    if not user:
-        if not active_status:
-            raise UserException(errorCode=f"User '{username}' is already in active.")
-        raise UserException(errorCode=f"User '{username}' not Found")
-
-    return user
-
-
-def is_user_exist(username: str, db: Session, active_status: bool = True):
     user = None
     cache_key = f"USER:{username}"
     cache_user = redis_cache.get(cache_key)
     if cache_user:
         user_data = json.loads(cache_user)
-        return datetime_parser(user_data), user
+        return await datetime_parser(user_data), user
 
     # Search From db
     user = (
@@ -49,7 +38,7 @@ def is_user_exist(username: str, db: Session, active_status: bool = True):
         .first()
     )
     if not user:
-        raise UserException(
+        raise VariableException(
             errorCode=(
                 f"User '{username}' is already in active."
                 if not active_status
@@ -63,33 +52,31 @@ def is_user_exist(username: str, db: Session, active_status: bool = True):
     return user_data, user
 
 
-def datetime_parser(data: dict):
-    for key, value in data.items():
-        if isinstance(value, str):
-            try:
-                data[key] = datetime.fromisoformat(value)
-            except ValueError:
-                pass
-    return data
-
-
-def role_available(role_id: int, db: Session):
+async def role_available(role_id: int, db: Session):
     role = db.query(role_model.Role).filter(role_model.Role.id == role_id).first()
     if not role:
-        raise RoleException(statusCode=409, errorCode=f"Role {role_id} not found")
+        raise VariableException(statusCode=409, errorCode=f"Role {role_id} not found")
 
 
-def sorting_user(
-    sort_by: Optional[schemas.SortByQuery], order_by: Optional[schemas.OrderQuery], query: list[dict]
+async def sorting_user(
+        query, order_by: Optional[schemas.OrderQuery],
+        sort_by: Optional[schemas.SortByQuery]
 ):
-    if sort_by == "role_id":
-        sort_field = user_model.User.role_id
-    else:
-        sort_field = user_model.User.username
+    def get_sort_value(user):
+        value = getattr(user, sort_by)
+        if isinstance(value, str):
+            return value.lower()
+        return value
 
+    if not sort_by and order_by:  # order_by 만 있는 경우
+        sort_by = "username"
+    elif not order_by and sort_by:  # sort_by 만 있는 경우ㅉ
+        return sorted(query, key=get_sort_value)
+
+    # 둘다 있는 경우
     if order_by == "desc":
-        query = query.order_by(desc(sort_field))
+        return sorted(query, key=get_sort_value, reverse=True)
     elif order_by == "asc":
-        query = query.order_by(asc(sort_field))
-
-    return query.all()
+        return sorted(query, key=get_sort_value)
+    else:  # 아무것도 없는 경우
+        return query

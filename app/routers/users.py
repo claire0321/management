@@ -5,10 +5,10 @@ from fastapi.security import OAuth2PasswordBearer
 
 from app.authorization import oauth2
 from app.databases import user_model, database
-from app.databases.redis_base import redis_cache, redis_set
-from app.error import UserException
+from app.databases.redis_base import redis_set
+from app.error import VariableException
 from app.models import schemas
-from app.routers import is_user_exist, role_available, sorting_user
+from app.routers import is_user_exist, crud
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -31,21 +31,13 @@ db_dependency = database.db_dependency
     description="새로운 회원의 정보를 추가 합니다.",
 )
 async def create_user(user: schemas.UserCreateBody, db: db_dependency):
-    user_data = user.model_dump(exclude_unset=True)  # dict
-    user_data["password"] = user.password  # updated user_data, dict
-    new_user = user_model.User(**user_data)  # user_model.User
-    role_available(user.role_id, db)
-
     try:
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
-
-        redis_set(id_=user.username, data=user_data)
-
+        user_data = user.model_dump(exclude_unset=True)  # dict
+        user_data["password"] = user.password  # updated user_data, dict
+        await crud.create_(user_data, db)
         return user
     except:
-        raise UserException(errorCode=f"Username '{user.username}' already exists")
+        raise VariableException(errorCode=f"Username '{user.username}' already exists")
 
 
 @router.get(
@@ -56,26 +48,11 @@ async def create_user(user: schemas.UserCreateBody, db: db_dependency):
     description="전체 회원의 username 목록을 list 형태로 출력 합니다.",
 )
 async def get_users(
-    db: db_dependency,
-    order_by: Optional[schemas.OrderQuery] = None,
-    sort_by: Optional[schemas.SortByQuery] = None,
+        db: db_dependency,
+        order_by: Optional[schemas.OrderQuery] = None,
+        sort_by: Optional[schemas.SortByQuery] = None,
 ):
-    query = db.query(user_model.User).filter(user_model.User.is_active == True)
-    users = sorting_user(sort_by, order_by, query)
-
-    # Caching into redis
-    for user in users:
-        cache_key = f"USER:{user.username}"
-        cache_data = redis_cache.get(cache_key)
-        if not cache_data:
-            user_data = {k: v for k, v in user.__dict__.items() if not k.startswith("_")}
-            redis_set(id_=user.username, data=user_data)
-    return users
-
-
-@router.get("/redis/test")
-async def test():
-    return redis_cache
+    return await crud.get_s(db, order_by, sort_by)
 
 
 @router.get(
@@ -86,14 +63,7 @@ async def test():
     description="username에 해당 하는 회원 정보를 조회 합니다.",
 )
 async def get_user(username: str, db: db_dependency):
-    if not "".join(username.split()):
-        raise FieldException(errorCode="Username cannot be empty")
-    if " " in username:
-        raise FieldException(
-            errorCode="Validation Error. Please provide value without any space in Username."
-        )
-    user_data, _ = is_user_exist(username=username, db=db)
-    return user_data
+    return await crud.get_(username, db)
 
 
 @router.put(
@@ -105,38 +75,13 @@ async def get_user(username: str, db: db_dependency):
     description="username에 해당 하는 회원 정보를 수정 합니다. 수정 가능한 항목: password, email",
 )
 async def update_user(
-    updated_user: schemas.UserUpdateBody,
-    db: db_dependency,
-    current_user: schemas.TokenData = Depends(oauth2.get_api_key),
+        updated_user: schemas.UserUpdateBody,
+        db: db_dependency,
+        current_user: schemas.TokenData = Depends(oauth2.get_api_key),
 ):
-    current_role = current_user.role_id
-    username = updated_user.username
-    if " " in username:
-        raise FieldException(
-            errorCode="Validation Error. Please provide value without any space in Username."
-        )
-
-    user_data, user = is_user_exist(username=username, db=db)  # user_model.User
     update_data = updated_user.model_dump(exclude_unset=True)  # dict
 
-    try:
-        if not user:
-            user = db.query(user_model.User).filter(user_model.User.username == username).first()
-        for key, value in update_data.items():
-            if value:
-                if key == "role_id" and current_role != 1:
-                    raise UserException(statusCode=403, errorCode="Must be admin to update role")
-                user_data[key] = value
-                setattr(user, key, value)
-
-        db.commit()
-        db.refresh(user)
-
-        redis_set(id_=user.username, data=user_data)
-
-        return user
-    except UserException as e:
-        raise e
+    return await crud.update_(db, update_data, current_user)
 
 
 @router.delete(
@@ -146,24 +91,10 @@ async def update_user(
     description="username에 해당 하는 회원 정보를 삭제 합니다.",
 )
 async def delete_user(
-    username: str,
-    db: db_dependency,
+        username: str,
+        db: db_dependency,
 ):
-    user_data, user = is_user_exist(username=username, db=db)
-    try:
-        if user:
-            db.delete(user)
-            db.commit()
-        else:
-            db.query(user_model.User).filter(user_model.User.username == username).delete()
-            db.commit()
-
-        cache_user = redis_cache.get(f"USER:{username}")
-        if cache_user:
-            redis_cache.delete(f"USER:{username}")
-        return {"message": f"User '{username}' deleted successfully"}
-    except:
-        raise UserException(errorCode=f"Unable to delete {username}")
+    return await crud.delete_(db, username)
 
 
 @router.put(
@@ -174,8 +105,8 @@ async def delete_user(
     response_model=schemas.UserBase,
 )
 async def activate_user(
-    username: str,
-    db: db_dependency,
+        username: str,
+        db: db_dependency,
 ):
     user_data, user = is_user_exist(username, db, active_status=False)
     try:
@@ -192,8 +123,8 @@ async def activate_user(
 
         return {"message": f"User '{username}' is activated"}
         # return {"message": f"User '{username}' is deactivated"}
-    except UserException:
-        raise UserException(errorCode="Invalid values to be updated")
+    except VariableException:
+        raise VariableException(errorCode="Invalid values to be updated")
 
 
 @router.put(
@@ -203,8 +134,8 @@ async def activate_user(
     description="username에 해당 하는 회원을 비활성화 합니다",
 )
 async def deactivate_user(
-    username: str,
-    db: db_dependency,
+        username: str,
+        db: db_dependency,
 ):
     user_data, user = is_user_exist(username, db)
 
@@ -222,4 +153,4 @@ async def deactivate_user(
 
         return {"message": f"User '{username}' is deactivated"}
     except:
-        raise UserException(errorCode="Invalid values to be updated")
+        raise VariableException(errorCode="Invalid values to be updated")
