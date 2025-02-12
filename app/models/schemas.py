@@ -52,7 +52,11 @@ class UserBase(BaseModel):
         from_attributes = True
 
 
-class UserCreateBody(UserBase):
+class UserCreateBody(BaseModel):
+    username: str
+    password: Annotated[str, Field(exclude=True)]
+    email: Optional[EmailStr] = None
+
     # noinspection PyNestedDecorators
     @model_validator(mode="before")
     @classmethod

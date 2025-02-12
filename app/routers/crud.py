@@ -10,10 +10,8 @@ async def create_(data: dict, db: db_dependency, types: str = "user"):
     # Create new user or role
     if types == "user":
         new_object = user_model.User(**data)  # user_model.User
-        await role_available(new_object.role_id, db)
     else:  # if type is role
         new_object = role_model.Role(**data)
-
     try:
         db.add(new_object)
         db.commit()
@@ -69,8 +67,11 @@ async def update_(db: db_dependency, update_data: dict,
         if not update_db:
             VariableException(errorCode=f"User {updated_user.username} not found")
         for key, value in update_data.items():
-            if current_user.role_id != 1 and key == "role_id":
-                raise VariableException(statusCode=403, errorCode="Must be admin to update role")
+            if key == "role_id":
+                if current_user.role_id != 1:
+                    raise VariableException(statusCode=403, errorCode="Must be admin to update role")
+                else:
+                    await role_available(value, db)
             setattr(update_db, key, value)
         db.commit()
         db.refresh(update_db)
