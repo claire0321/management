@@ -9,6 +9,7 @@ from app.authorization import token
 from app.error.exceptions import AuthBackendException, VariableException
 
 BASIC_PATH = ["/docs", "/openapi.json", "/favicon.ico", "/redoc"]
+NO_AUTH = ["/login/", "/redis/"]
 
 
 class AuthenticationMiddleware(BaseHTTPMiddleware):
@@ -40,15 +41,14 @@ class AuthorizationMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: FastAPI):
         super().__init__(app)
         self.role_access = {
-            "admin": {"users": ["POST", "GET", "PUT", "DELETE"], "role": ["POST", "PUT", "GET"],
-                      "redis": ["POST", "GET", "PUT", "DELETE"]},
-            "manager": {"users": ["POST", "GET", "PUT", "DELETE"], "redis": ["POST", "GET", "PUT", "DELETE"]},
-            "general": {"users": ["GET"], "redis": ["POST", "GET", "PUT", "DELETE"]},
+            "admin": {"users": ["POST", "GET", "PUT", "DELETE"], "role": ["POST", "PUT", "GET"]},
+            "manager": {"users": ["POST", "GET", "PUT", "DELETE"]},
+            "general": {"users": ["GET"]},
         }
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
-        if "login" not in path and path not in BASIC_PATH:
+        if not any(path.startswith(prefix) for prefix in NO_AUTH) and path not in BASIC_PATH:
             auth = request.headers.get("authorization")
             if auth:
                 token_data = token.verify_token(auth)
