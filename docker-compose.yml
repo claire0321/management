@@ -22,17 +22,10 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
     ports:
       - ${DB_BINDING_PORT}:${DB_PORT}
-    volumes:
-      - mysql_volume_data:/var/lib/mysql
   redis:
     image: ${REDIS_IMAGE}
     container_name: ${REDIS_CONTAINER}
     ports:
       - ${REDIS_PORT}:${REDIS_PORT}
-    volumes:
-      - redis_volume_data:/data
     command: redis-server --requirepass ${REDIS_PASSWORD}
     restart: always
-volumes:
-  mysql_volume_data:
-  redis_volume_data:
