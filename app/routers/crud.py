@@ -64,7 +64,7 @@ async def update_(db: db_dependency, update_data: dict,
 
         update_db = db.query(model).filter(value == name).first()
         if not update_db:
-            VariableException(errorCode=f"User {updated_user.username} not found")
+            VariableException(errorCode=f"User {update_db.username} not found")
         for key, value in update_data.items():
             if key == "role_id":
                 if current_user.role_id != 1:
