@@ -4,11 +4,10 @@ from fastapi import APIRouter, status, Depends
 from fastapi.security import OAuth2PasswordBearer
 
 from app.authorization import oauth2
-from app.databases import user_model, database
-from app.databases.redis_base import redis_set
+from app.databases import database
 from app.error import VariableException
 from app.models import schemas
-from app.routers import is_user_exist, crud
+from app.routers import crud
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -108,23 +107,7 @@ async def activate_user(
         username: str,
         db: db_dependency,
 ):
-    user_data, user = is_user_exist(username, db, active_status=False)
-    try:
-        user_data["is_active"] = True
-        if user:
-            user.is_active = True
-            db.commit()
-            db.refresh(user)
-        else:
-            db.query(user_model.User).filter_by(username=username).update({"is_active": True})
-            db.commit()
-
-        redis_set(id_=username, data=user_data)
-
-        return {"message": f"User '{username}' is activated"}
-        # return {"message": f"User '{username}' is deactivated"}
-    except VariableException:
-        raise VariableException(errorCode="Invalid values to be updated")
+    return await crud.activate_(username, db)
 
 
 @router.put(
@@ -137,20 +120,4 @@ async def deactivate_user(
         username: str,
         db: db_dependency,
 ):
-    user_data, user = is_user_exist(username, db)
-
-    try:
-        user_data["is_active"] = False
-        if user:
-            user.is_active = False
-            db.commit()
-            db.refresh(user)
-        else:
-            db.query(user_model.User).filter_by(username=username).update({"is_active": False})
-            db.commit()
-
-        redis_set(id_=username, data=user_data)
-
-        return {"message": f"User '{username}' is deactivated"}
-    except:
-        raise VariableException(errorCode="Invalid values to be updated")
+    return await crud.deactivate_(username, db)
