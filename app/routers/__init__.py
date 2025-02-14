@@ -1,11 +1,10 @@
-import json
 from datetime import datetime
 from typing import Optional
 
 from sqlalchemy.orm import Session
 
 from app.databases import user_model, role_model
-from app.databases.redis_base import redis_cache, redis_set
+from app.databases.redis_base import redis_set, redis_get
 from app.error.exceptions import VariableException
 from app.models import schemas
 
@@ -22,13 +21,15 @@ async def is_user_exist(username: str, db: Session, active_status: bool = True):
         return data
 
     user = None
-    cache_key = f"USER:{username}"
-    cache_user = redis_cache.get(cache_key)
-    if cache_user:
-        user_data = json.loads(cache_user)
-        return await datetime_parser(user_data), user
+
+    # Has redis value
+    print("Searching from redis ...")
+    cache_data = redis_get("user", username)
+    if cache_data:
+        return await datetime_parser(cache_data), user
 
     # Search From db
+    print("Searching from db ...")
     user = (
         db.query(user_model.User)
         .filter(
@@ -47,8 +48,9 @@ async def is_user_exist(username: str, db: Session, active_status: bool = True):
         )
 
     # Caching to redis
-    user_data = {k: v for k, v in user.__dict__.items() if not k.startswith("_")}
-    redis_set("user", username, user_data)
+    user_data = user.__dict__.copy()
+    user_data.pop("_sa_instance_state")
+    redis_set("user", username, user)
     return user_data, user
 
 

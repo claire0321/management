@@ -4,7 +4,7 @@ from fastapi import FastAPI, APIRouter
 
 from app import initialize_data
 from app.databases.database import engine, Base
-from app.databases.redis_base import redis_cache
+from app.databases.redis_base import redis_connect, redis_disconnect, redis_rd
 from app.error import exception_handler
 from app.middleware import init_middleware
 from app.routers import authentication, users, roles
@@ -13,18 +13,14 @@ from app.routers import authentication, users, roles
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     initialize_data()
+    redis_connect()
     yield
+    redis_disconnect()
 
 
 app = FastAPI(lifespan=lifespan)
 
 Base.metadata.create_all(bind=engine)
-
-
-@app.on_event("shutdown")
-def shutdown_event():
-    redis_cache.flushdb()
-
 
 redis_test = APIRouter(
     prefix="/redis",
@@ -34,12 +30,12 @@ redis_test = APIRouter(
 
 @redis_test.get("/get-redis")
 async def show_redis():
-    return redis_cache
+    return redis_rd()
 
 
 @redis_test.put("/delete")
 async def delete_redis():
-    redis_cache.flushdb()
+    redis_rd().flushdb()
     return {"message": "Cache removed"}
 
 

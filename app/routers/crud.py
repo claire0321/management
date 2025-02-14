@@ -1,6 +1,6 @@
 from app.databases import user_model, role_model
 from app.databases.database import db_dependency
-from app.databases.redis_base import redis_cache, redis_set
+from app.databases.redis_base import redis_set, redis_get, redis_delete
 from app.error import FieldException, VariableException
 from app.models import schemas
 from app.routers import role_available, sorting_user, is_user_exist
@@ -10,14 +10,16 @@ async def create_(data: dict, db: db_dependency, types: str = "user"):
     # Create new user or role
     if types == "user":
         new_object = user_model.User(**data)  # user_model.User
+        name = new_object.username
     else:  # if type is role
         new_object = role_model.Role(**data)
+        name = new_object.name
     try:
         db.add(new_object)
         db.commit()
         db.refresh(new_object)
 
-        redis_set(type_=types, id_=new_object.username if types == "user" else new_object.name, data=data)
+        redis_set(type_=types, id_=name, db=new_object)
     except:
         raise
 
@@ -31,13 +33,10 @@ async def get_s(db: db_dependency, order_by=None, sort_by=None, types: str = "us
         lists = db.query(role_model.Role).all()
 
     # Caching
-    for val in lists:
-        name = val.username if types == "user" else val.name
-        cache_key = f"{types.upper()}:{name}"
-        cache_data = redis_cache.get(cache_key)
-        if not cache_data:
-            data_ = {k: v for k, v in val.__dict__.items() if not k.startswith("_")}
-            redis_set(type_=types, id_=name, data=data_)
+    for var in lists:
+        name = var.username if types == "user" else var.name
+        if not redis_get(name=name):
+            redis_set(types, name, var)
     return lists
 
 
@@ -85,16 +84,53 @@ async def update_(db: db_dependency, update_data: dict,
 
 async def delete_(db: db_dependency, name: str):
     try:
-        user_data, user = is_user_exist(username, db)
-        if user:
-            db.delete(user)
-            db.commit()
-        else:
-            db.query(user_model.User).filter(user_model.User.username == name).delete()
-            db.commit()
-        cache_user = redis_cache.get(f"USER:{name}")
+        db.query(user_model.User).filter(user_model.User.username == name).delete()
+        db.commit()
+
+        cache_user = redis_get(name=name)
         if cache_user:
-            redis_cache.delete(f"USER:{name}")
+            redis_delete(f"USER:{name}")
         return {"message": f"User '{name}' deleted successfully"}
     except:
-        raise VariableException(errorCode=f"Unable to delete {username}")
+        raise VariableException(errorCode=f"Unable to delete {name}")
+
+
+async def activate_(username: str, db: db_dependency):
+    try:
+        user = db.query(user_model.User).filter_by(username=username).first()
+        if not user:
+            raise
+    except:
+        raise VariableException(errorCode=f"User '{username}' not Found")
+
+    try:
+        user.is_active = True
+        db.commit()
+        db.refresh(user)
+
+        redis_set(id_=username, db=user)
+        return user
+    except VariableException:
+        raise VariableException(errorCode="Invalid values to be updated")
+
+
+async def deactivate_(username: str, db: db_dependency):
+    try:
+        user = db.query(user_model.User).filter_by(username=username).first()
+        if not user:
+            raise
+    except:
+        raise VariableException(errorCode=f"User '{username}' not Found")
+
+    try:
+        if not user:
+            raise VariableException(errorCode=f"User '{username}' not Found")
+        user.is_active = False
+        db.commit()
+        db.refresh(user)
+
+        redis_delete(f"USER:{username}")
+
+        return {"message": f"User '{username}' is deactivated"}
+    except VariableException:
+        raise VariableException(errorCode="Invalid values to be updated")
