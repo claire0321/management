@@ -25,7 +25,8 @@ class VariableException(Exception):
     statusCode: Optional[int] = 409
     errorCode: Optional[str] = None
 
-# @dataclass
-# class UnhandledException(Exception):
-#     statusCode: Optional[int] = 404
-#     errorCode: Optional[str] = None
+
+@dataclass
+class RedisException(Exception):
+    statusCode: Optional[int] = 422
+    errorCode: Optional[str] = None
