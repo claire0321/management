@@ -87,6 +87,14 @@ async def delete_(db: db_dependency, name: str):
         db.commit()
 
         cache_user = redis_get(name=name)
+        user_data, user = is_user_exist(name, db)
+        if user:
+            db.delete(user)
+            db.commit()
+        else:
+            db.query(user_model.User).filter(user_model.User.username == name).delete()
+            db.commit()
+        cache_user = redis_cache.get(f"USER:{name}")
         if cache_user:
             redis_delete(f"USER:{name}")
         return {"message": f"User '{name}' deleted successfully"}
@@ -133,3 +141,4 @@ async def deactivate_(username: str, db: db_dependency):
         return {"message": f"User '{username}' is deactivated"}
     except VariableException:
         raise VariableException(errorCode="Invalid values to be updated")
+        raise VariableException(errorCode=f"Unable to delete {name}")

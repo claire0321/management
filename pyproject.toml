@@ -6,7 +6,7 @@ authors = ["Inkyeong <ik.kim@time-gate.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "3.11.7"
+python = "^3.11.7"
 fastapi = "^0.115.6"
 pydantic = { extras = ["email"], version = "^2.10.4" }
 sqlalchemy = "^2.0.36"
