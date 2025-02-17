@@ -7,6 +7,10 @@ RUN apk add python3
 
 RUN apk add py3-pip pipx
 
+RUN apk add --no-cache pkgconfig glib-dev
+RUN apk add --no-cache mysql-dev build-base  python3-dev
+RUN pip wheel --no-cache-dir --use-pep517 "mysqlclient (==2.2.7)"
+
 RUN python3 --version
 
 # Ensure pipx installs globally in /opt
@@ -31,4 +35,14 @@ USER jenkins
 # Verify Poetry installation as Jenkins user
 RUN poetry --version
 
-RUN poetry config virtualenvs.create false
+WORKDIR /home/jenkins/fastapi-app
+
+COPY poetry.lock pyproject.toml README.md /home/jenkins/fastapi-app/
+
+# RUN pip wheel --no-cache-dir --use-pep517 "mysqlclient (==2.2.7)"
+RUN poetry install --no-root --no-interaction
+# RUN poetry install --no-root --no-interaction
+
+RUN poetry check
+
+COPY ./app /home/jenkins/fastapi-app/app
