@@ -1,20 +1,34 @@
-FROM python:3.11.7
+FROM jenkins/agent:alpine-jdk21
 
-RUN pip install -U pip && pip install poetry
+USER root
 
-WORKDIR /fastapi-app
+# Install Python 3.11
+RUN apk add python3
 
-#COPY pyproject.toml /fastapi-app/
-#COPY poetry.lock /fastapi-app
-COPY poetry.lock pyproject.toml README.md /fastapi-app/
+RUN apk add py3-pip pipx
 
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-root --no-interaction
+RUN python3 --version
 
-RUN poetry check
+# Ensure pipx installs globally in /opt
+ENV PIPX_BIN_DIR="/opt/poetry/bin"
+ENV PIPX_HOME="/opt/poetry"
 
-COPY ./app ./app
+# Install Poetry using pipx
+RUN pipx install poetry
 
-RUN pip install uvicorn
+# Ensure Poetry is in the global PATH
+ENV PATH="${PIPX_BIN_DIR}:${PATH}"
 
-CMD [ "poetry", "run", "uvicorn", "app.main:app", "--reload", "--host", "0.0.0.0" ]
+# Change ownership so Jenkins user can access Poetry
+RUN chown -R jenkins:jenkins /opt/poetry
+
+# Verify Poetry installation as root
+RUN poetry --version
+
+# Switch to Jenkins user
+USER jenkins
+
+# Verify Poetry installation as Jenkins user
+RUN poetry --version
+
+RUN poetry config virtualenvs.create false
