@@ -45,4 +45,6 @@ RUN poetry install --no-root --no-interaction
 
 RUN poetry check
 
+RUN pipx install uvicorn
+
 COPY ./app /home/jenkins/workspace/membership_management/app
