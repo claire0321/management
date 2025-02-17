@@ -1,20 +1,16 @@
-FROM python:3.11.7
+FROM jenkins/inbound-agent:latest
 
-RUN pip install -U pip && pip install poetry
+USER root
 
-WORKDIR /fastapi-app
+# RUN apk add python3
 
-#COPY pyproject.toml /fastapi-app/
-#COPY poetry.lock /fastapi-app
-COPY poetry.lock pyproject.toml README.md /fastapi-app/
+# RUN apk add py3-pip pipx
 
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-root --no-interaction
+# RUN python3 --version
 
-RUN poetry check
-
-COPY ./app ./app
-
-RUN pip install uvicorn
-
-CMD [ "poetry", "run", "uvicorn", "app.main:app", "--reload", "--host", "0.0.0.0" ]
+RUN apt-get update && apt-get install ca-certificates curl && \
+    install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc && \
+    chmod a+r /etc/apt/keyrings/docker.asc
+    
+USER jenkins
