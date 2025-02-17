@@ -35,9 +35,9 @@ USER jenkins
 # Verify Poetry installation as Jenkins user
 RUN poetry --version
 
-WORKDIR /home/jenkins/fastapi-app
+WORKDIR /home/jenkins/workspace/membership_management/
 
-COPY poetry.lock pyproject.toml README.md /home/jenkins/fastapi-app/
+COPY poetry.lock pyproject.toml README.md /home/jenkins/workspace/membership_management/
 
 # RUN pip wheel --no-cache-dir --use-pep517 "mysqlclient (==2.2.7)"
 RUN poetry install --no-root --no-interaction
@@ -45,4 +45,4 @@ RUN poetry install --no-root --no-interaction
 
 RUN poetry check
 
-COPY ./app /home/jenkins/fastapi-app/app
+COPY ./app /home/jenkins/workspace/membership_management/app
