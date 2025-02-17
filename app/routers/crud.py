@@ -50,8 +50,7 @@ async def get_(username: str, db: db_dependency):
     return user_data
 
 
-async def update_(db: db_dependency, update_data: dict,
-                  current_user: schemas.TokenData, types: str = "user"):
+async def update_(db: db_dependency, update_data: dict, current_user: schemas.TokenData, types: str = "user"):
     try:
         if types == "user":
             model = user_model.User
