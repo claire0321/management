@@ -51,8 +51,7 @@ async def get_(username: str, db: db_dependency):
     return user_data
 
 
-async def update_(db: db_dependency, update_data: dict,
-                  current_user: schemas.TokenData, types: str = "user"):
+async def update_(db: db_dependency, update_data: dict, current_user: schemas.TokenData, types: str = "user"):
     try:
         if types == "user":
             model = user_model.User
@@ -65,7 +64,7 @@ async def update_(db: db_dependency, update_data: dict,
 
         update_db = db.query(model).filter(value == name).first()
         if not update_db:
-            VariableException(errorCode=f"User {updated_user.username} not found")
+            VariableException(errorCode=f"User {update_db.username} not found")
         for key, value in update_data.items():
             if key == "role_id":
                 if current_user.role_id != 1:
@@ -85,7 +84,7 @@ async def update_(db: db_dependency, update_data: dict,
 
 async def delete_(db: db_dependency, name: str):
     try:
-        user_data, user = is_user_exist(username, db)
+        user_data, user = is_user_exist(name, db)
         if user:
             db.delete(user)
             db.commit()
@@ -97,4 +96,4 @@ async def delete_(db: db_dependency, name: str):
             redis_cache.delete(f"USER:{name}")
         return {"message": f"User '{name}' deleted successfully"}
     except:
-        raise VariableException(errorCode=f"Unable to delete {username}")
+        raise VariableException(errorCode=f"Unable to delete {name}")
