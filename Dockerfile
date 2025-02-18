@@ -1,14 +1,16 @@
-FROM jenkins/agent:alpine-jdk21
+FROM jenkins/agent:bookworm-jdk21
 
 USER root
 
 # Install Python 3.11
-RUN apk add python3
+RUN apt-get update
+RUN apt-get install -y python3
+# RUN apk add python3
 
-RUN apk add py3-pip pipx
-
-RUN apk add --no-cache pkgconfig glib-dev
-RUN apk add --no-cache mysql-dev build-base  python3-dev
+RUN RUN apt-get py3-pip
+RUN apt-get install
+RUN apt-get --no-cache pkgconfig glib-dev
+RUN apt-get --no-cache mysql-dev build-base  python3-dev
 RUN pip wheel --no-cache-dir --use-pep517 "mysqlclient (==2.2.7)"
 
 RUN python3 --version
@@ -48,4 +50,7 @@ RUN poetry install --no-root --no-interaction
 RUN pipx install uvicorn
 
 WORKDIR /home/jenkins/workspace/membership_management/
-# COPY ./app /home/jenkins/workspace/membership_management/app
+
+COPY ./app /home/jenkins/workspace/membership_management/app
+
+CMD [ "poetry", "run", "uvicorn", "app.main:app", "--reload", "--host", "0.0.0.0" ]
