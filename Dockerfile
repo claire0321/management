@@ -35,6 +35,10 @@ USER jenkins
 # Verify Poetry installation as Jenkins user
 RUN poetry --version
 
+# Set environment variables for Poetry
+ENV POETRY_VIRTUALENVS_CREATE=true
+ENV POETRY_VIRTUALENVS_IN_PROJECT=true
+
 WORKDIR /home/jenkins/poetry/
 
 COPY poetry.lock pyproject.toml ./
