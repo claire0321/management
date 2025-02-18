@@ -35,16 +35,16 @@ USER jenkins
 # Verify Poetry installation as Jenkins user
 RUN poetry --version
 
-# WORKDIR /home/jenkins/workspace/membership_management/
+WORKDIR /home/jenkins/workspace/membership_management/
 
-# COPY poetry.lock pyproject.toml README.md /home/jenkins/workspace/membership_management/
+COPY poetry.lock pyproject.toml README.md /home/jenkins/workspace/membership_management/
 
-# # RUN pip wheel --no-cache-dir --use-pep517 "mysqlclient (==2.2.7)"
+# RUN pip wheel --no-cache-dir --use-pep517 "mysqlclient (==2.2.7)"
+RUN poetry install --no-root --no-interaction
 # RUN poetry install --no-root --no-interaction
-# # RUN poetry install --no-root --no-interaction
 
-# RUN poetry check
+RUN poetry check
 
-# RUN pipx install uvicorn
+RUN pipx install uvicorn
 
-# COPY ./app /home/jenkins/workspace/membership_management/app
+COPY ./app /home/jenkins/workspace/membership_management/app
