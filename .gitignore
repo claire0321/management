@@ -136,3 +136,16 @@ data/
 
 # poetry.lock
 # pyproject.toml
+20250213145938141_ik.kim_attachment/Chart.yaml
+20250213145938141_ik.kim_attachment/configmap.yaml
+20250213145938141_ik.kim_attachment/deployment.yaml
+20250213145938141_ik.kim_attachment/dev-workload-api-appset.yaml
+20250213145938141_ik.kim_attachment/namespace.yaml
+20250213145938141_ik.kim_attachment/secret.yaml
+20250213145938141_ik.kim_attachment/service.yaml
+20250213145938141_ik.kim_attachment/values.yaml
+20250213145938141_ik.kim_attachment/.idea/misc.xml
+20250213145938141_ik.kim_attachment/.idea/modules.xml
+20250213145938141_ik.kim_attachment/.idea/workspace.xml
+20250213145938141_ik.kim_attachment/.idea/inspectionProfiles/profiles_settings.xml
+20250213145938141_ik.kim_attachment/.idea/inspectionProfiles/Project_Default.xml
