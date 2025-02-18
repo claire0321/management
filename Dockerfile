@@ -1,16 +1,14 @@
-FROM jenkins/agent:bookworm-jdk21
+FROM jenkins/agent:alpine-jdk21
 
 USER root
 
 # Install Python 3.11
-RUN apt-get update
-RUN apt-get install -y python3
-# RUN apk add python3
+RUN apk add python3
 
-RUN RUN apt-get py3-pip
-RUN apt-get install
-RUN apt-get --no-cache pkgconfig glib-dev
-RUN apt-get --no-cache mysql-dev build-base  python3-dev
+RUN apk add py3-pip pipx
+
+RUN apk add --no-cache pkgconfig glib-dev
+RUN apk add --no-cache mysql-dev build-base  python3-dev
 RUN pip wheel --no-cache-dir --use-pep517 "mysqlclient (==2.2.7)"
 
 RUN python3 --version
@@ -37,20 +35,14 @@ USER jenkins
 # Verify Poetry installation as Jenkins user
 RUN poetry --version
 
-# Set environment variables for Poetry
-ENV POETRY_VIRTUALENVS_CREATE=true
-ENV POETRY_VIRTUALENVS_IN_PROJECT=true
+WORKDIR /home/jenkins/membership_management
 
-WORKDIR /home/jenkins/poetry/
+COPY poetry.lock pyproject.toml /home/jenkins/membership_management/
 
-COPY poetry.lock pyproject.toml ./
-
+# RUN pip wheel --no-cache-dir --use-pep517 "mysqlclient (==2.2.7)"
 RUN poetry install --no-root --no-interaction
+# RUN poetry install --no-root --no-interaction
 
-RUN pipx install uvicorn
+RUN rm poetry.lock pyproject.toml
 
-WORKDIR /home/jenkins/workspace/membership_management/
-
-COPY ./app /home/jenkins/workspace/membership_management/app
-
-CMD [ "poetry", "run", "uvicorn", "app.main:app", "--reload", "--host", "0.0.0.0" ]
+COPY ./app /home/jenkins/membership_management/app
