@@ -2,6 +2,8 @@ FROM jenkins/agent:alpine-jdk21
 
 USER root
 
+RUN apk add docker-compose
+
 # Install Python 3.11
 RUN apk add python3
 
@@ -48,3 +50,5 @@ RUN rm poetry.lock pyproject.toml
 COPY ./app /home/jenkins/membership_management/app
 
 WORKDIR /home/jenkins
+
+# https://velog.io/@mungmnb777/%EC%A0%A0%ED%82%A8%EC%8A%A4-Permission-denied-%EC%97%90%EB%9F%AC
