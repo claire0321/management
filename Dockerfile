@@ -47,7 +47,7 @@ RUN poetry install --no-root --no-interaction
 
 RUN rm poetry.lock pyproject.toml
 
-COPY ./app /home/jenkins/membership_management/app
+COPY ../app /home/jenkins/membership_management/app
 
 WORKDIR /home/jenkins
 
