@@ -2,6 +2,8 @@ FROM jenkins/agent:alpine-jdk21
 
 USER root
 
+RUN apk add docker-compose
+
 # Install Python 3.11
 RUN apk add python3
 
@@ -35,14 +37,18 @@ USER jenkins
 # Verify Poetry installation as Jenkins user
 RUN poetry --version
 
-WORKDIR /home/jenkins/fastapi-app
+WORKDIR /home/jenkins/membership_management
 
-COPY poetry.lock pyproject.toml README.md /home/jenkins/fastapi-app/
+COPY poetry.lock pyproject.toml /home/jenkins/membership_management/
 
 # RUN pip wheel --no-cache-dir --use-pep517 "mysqlclient (==2.2.7)"
 RUN poetry install --no-root --no-interaction
 # RUN poetry install --no-root --no-interaction
 
-RUN poetry check
+RUN rm poetry.lock pyproject.toml
 
-COPY ./app /home/jenkins/fastapi-app/app
+COPY ../app /home/jenkins/membership_management/app
+
+WORKDIR /home/jenkins
+
+# https://velog.io/@mungmnb777/%EC%A0%A0%ED%82%A8%EC%8A%A4-Permission-denied-%EC%97%90%EB%9F%AC
