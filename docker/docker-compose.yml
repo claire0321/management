@@ -2,8 +2,7 @@
 services:
   api:
     build: .
-    image: membership-management
-    # image: ${API_IMAGE}:${API_TAG}
+    image: ${API_IMAGE}:${API_TAG}
     container_name: ${API_CONTAINER}
     ports:
       - ${API_PORT}:${API_PORT}
