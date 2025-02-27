@@ -95,9 +95,9 @@ class TestUserAdmin:
                         response = await client.post("/users/", json=new_user, headers=auth_header)
                     assert response.status_code == 201
                     assert response.json() == {"username": self.username, "email": None}
-                    TestMessageCli.finish(func_name, len(func_name))
                 finally:
-                    await client.delete()
+                    await client.delete(f"/users/delete?username={self.username}", headers=auth_header)
+                    TestMessageCli.finish(func_name, len(func_name))
 
     @pytest.mark.asyncio
     async def test_create_user_already_exist_by_admin(self):
