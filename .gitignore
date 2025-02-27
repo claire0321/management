@@ -131,7 +131,6 @@ README.md
 *.iml
 *.db
 
-test/
 data/
 
 # poetry.lock

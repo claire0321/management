@@ -32,7 +32,6 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
@@ -52,3 +51,17 @@ class JWTSetting(Settings):
     SECRET_KEY: str
     ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: str
+
+
+class TestMessageCli:
+    @staticmethod
+    def start(function: str, n: int):
+        print(f"┌--{'-' * (n + 15)}--┐")
+        print(f"   <{function} starts...>")
+        # print("<---------------------------------->")
+
+    @staticmethod
+    def finish(function: str, n: int):
+        # print("<---------------------------------->")
+        print(f"   <{function} finished...>")
+        print(f"└--{'-' * (n + 15)}--┘")

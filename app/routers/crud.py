@@ -63,7 +63,7 @@ async def update_(db: db_dependency, update_data: dict, current_user: schemas.To
 
         update_db = db.query(model).filter(value == name).first()
         if not update_db:
-            VariableException(errorCode=f"User {update_db.username} not found")
+            raise VariableException(errorCode=f"{name} not found")
         for key, value in update_data.items():
             if key == "role_id":
                 if current_user.role_id != 1:
@@ -87,14 +87,14 @@ async def delete_(db: db_dependency, name: str):
         db.commit()
 
         cache_user = redis_get(name=name)
-        user_data, user = is_user_exist(name, db)
+        user_data, user = await is_user_exist(name, db)
         if user:
             db.delete(user)
             db.commit()
         else:
             db.query(user_model.User).filter(user_model.User.username == name).delete()
             db.commit()
-        cache_user = redis_cache.get(f"USER:{name}")
+        cache_user = redis_get(f"USER:{name}")
         if cache_user:
             redis_delete(f"USER:{name}")
         return {"message": f"User '{name}' deleted successfully"}
@@ -141,4 +141,3 @@ async def deactivate_(username: str, db: db_dependency):
         return {"message": f"User '{username}' is deactivated"}
     except VariableException:
         raise VariableException(errorCode="Invalid values to be updated")
-        raise VariableException(errorCode=f"Unable to delete {name}")

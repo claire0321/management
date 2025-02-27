@@ -9,7 +9,6 @@ from app.error.exceptions import VariableException
 from app.models import schemas
 
 
-# TODO: CRUD user 랑 role 둘다 쓸 수 있게 만들어 보기.
 async def is_user_exist(username: str, db: Session, active_status: bool = True):
     async def datetime_parser(data: dict):
         for key, value in data.items():
